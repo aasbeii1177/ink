@@ -192,6 +192,7 @@
 </head>
 <body>
 
+<div id="appShell" style="display:none;">
 <header class="top">
   <div class="brand">
     <h1 data-i18n="title">Pantone Explorer</h1>
@@ -200,6 +201,7 @@
   <div class="header-right">
     <div class="swatch-count"><b id="countNum">—</b><span data-i18n="swatchesShown">swatches shown</span></div>
     <span class="swatch-count ltr" id="syncIndicator" style="font-size:10px;"></span>
+    <button id="signOutBtn" type="button" data-i18n="signOut" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Sign out</button>
     <button id="langToggle" type="button">العربية</button>
   </div>
 </header>
@@ -233,6 +235,28 @@
 </main>
 
 <footer data-i18n="footer"></footer>
+</div>
+<!-- /appShell -->
+
+<!-- Login gate -->
+<div class="overlay open" id="loginOverlay" style="background:var(--paper);">
+  <div class="modal narrow" style="border:none;">
+    <div class="modal-body" style="padding:30px 26px;">
+      <h2 style="font-family:var(--serif); font-size:22px; margin:0 0 4px;" data-i18n="loginTitle">Sign in</h2>
+      <div style="font-size:12px; opacity:0.6; margin-bottom:20px;" data-i18n="loginSubtitle">Shared team login</div>
+      <div class="sync-field">
+        <label data-i18n="loginUsernameLabel">Username</label>
+        <input type="text" id="loginEmail" class="ltr" autocomplete="username">
+      </div>
+      <div class="sync-field">
+        <label data-i18n="loginPasswordLabel">Password</label>
+        <input type="password" id="loginPassword" class="ltr" autocomplete="current-password">
+      </div>
+      <button class="sync-btn-primary" id="loginSubmitBtn" style="width:100%; padding:11px;" data-i18n="loginSubmit">Sign in</button>
+      <div class="sync-status" id="loginStatus" style="border-top:none; padding-top:10px; min-height:16px;"></div>
+    </div>
+  </div>
+</div>
 
 <!-- Color detail modal -->
 <div class="overlay" id="overlay">
@@ -334,6 +358,15 @@ const STR = {
     footer:`This library covers 5,533 reference codes across six Pantone product lines — Solid Coated, Solid Uncoated, TCX Fashion + Home, Metallics, Pastels & Neons, and Skin Tones — drawn from widely circulated, community-published PMS-to-hex conversion tables, not Pantone Inc.'s own certified digital standard. Pantone's full commercial system (specialty finishes, later chip additions, GoeSystem, and every reprinted edition) is proprietary and licensed — it isn't available as an open dataset anywhere, at any count. Treat hex/CMYK values here as a close approximation for screen and general reference, not a substitute for a physical Pantone guide when exact color matching matters. The "reference mixing" guide is a simplified red/yellow/blue/white/black pigment estimate, not an official Pantone ink formula. Anything you save under "My Mixes" automatically syncs to this workspace's own Firebase project (visible in the ☁ status in the corner) so it stays the same across every computer that opens this file.`,
     langBtn:'العربية',
     syncIndSyncing:'☁ syncing…', syncIndSynced:'☁ synced', syncIndOffline:'☁ offline (saved locally)',
+    signOut:'Sign out',
+    loginTitle:'Sign in', loginSubtitle:'Shared team login',
+    loginUsernameLabel:'Username', loginPasswordLabel:'Password', loginSubmit:'Sign in',
+    loginErrEmpty:'Enter an email and password.',
+    loginSigningIn:'Signing in…',
+    loginErrBadCreds:'Wrong email or password.',
+    loginErrThrottled:'Too many attempts — wait a bit and try again.',
+    loginErrNetwork:'Could not reach the server — check your internet connection.',
+    loginErrGeneric:'Could not sign in — try again.',
   },
   ar: {
     dir:'rtl',
@@ -373,6 +406,15 @@ const STR = {
     footer:'تضم هذه المكتبة 5,533 رمزًا مرجعيًا عبر ست مجموعات من منتجات بانتون — Solid Coated وSolid Uncoated وTCX للأزياء والمنسوجات والمعادن والباستيل والنيون ودرجات لون البشرة — مأخوذة من جداول تحويل PMS إلى Hex منشورة ومتداولة على نطاق واسع، وليست المعيار الرقمي المعتمد رسميًا من شركة بانتون. نظام بانتون التجاري الكامل مملوك ومرخّص تجاريًا — وغير متاح كمجموعة بيانات مفتوحة بأي عدد. تعامل مع قيم Hex وCMYK هنا كتقريب قريب، وليست بديلاً عن دليل بانتون الفعلي عند الحاجة لمطابقة دقيقة. "دليل الخلط المرجعي" تقدير تقريبي وليس صيغة حبر رسمية من بانتون. كل ما تحفظه ضمن "خلطاتي" يُزامَن تلقائيًا مع مشروع Firebase الخاص بهذا العمل (تراه في مؤشر ☁ في الزاوية) ليبقى نفسه على كل جهاز يفتح هذا الملف.',
     langBtn:'English',
     syncIndSyncing:'☁ جارٍ المزامنة…', syncIndSynced:'☁ متزامن', syncIndOffline:'☁ غير متصل (محفوظ محليًا)',
+    signOut:'تسجيل الخروج',
+    loginTitle:'تسجيل الدخول', loginSubtitle:'حساب مشترك للفريق',
+    loginUsernameLabel:'اسم المستخدم', loginPasswordLabel:'كلمة المرور', loginSubmit:'تسجيل الدخول',
+    loginErrEmpty:'أدخل البريد الإلكتروني وكلمة المرور.',
+    loginSigningIn:'جارٍ تسجيل الدخول…',
+    loginErrBadCreds:'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+    loginErrThrottled:'محاولات كثيرة جدًا — انتظر قليلاً وحاول مرة أخرى.',
+    loginErrNetwork:'تعذّر الوصول إلى الخادم — تحقق من اتصال الإنترنت.',
+    loginErrGeneric:'تعذّر تسجيل الدخول — حاول مرة أخرى.',
   }
 };
 let currentLang = 'en';
@@ -538,16 +580,14 @@ function mergeMixes(local, cloud){
   return merged;
 }
 
-async function fbConnect(){
+function ensureFirebaseApp(){
+  if(fbApp) return true;
   try{
-    if(typeof firebase === 'undefined') return {ok:false, reason:'sdk'};
-    if(!fbApp){
-      fbApp = (firebase.apps && firebase.apps.length) ? firebase.apps[0] : firebase.initializeApp(FIREBASE_CONFIG);
-      fbDb = firebase.firestore();
-      await firebase.auth().signInAnonymously();
-    }
-    return {ok:true};
-  }catch(e){ return {ok:false, reason:'connect-failed'}; }
+    if(typeof firebase === 'undefined') return false;
+    fbApp = (firebase.apps && firebase.apps.length) ? firebase.apps[0] : firebase.initializeApp(FIREBASE_CONFIG);
+    fbDb = firebase.firestore();
+    return true;
+  }catch(e){ return false; }
 }
 
 function fbDocRef(){
@@ -601,8 +641,7 @@ function setSyncIndicator(state){
 
 async function doFullSync(){
   setSyncIndicator('syncing');
-  const conn = await fbConnect();
-  if(!conn.ok){ setSyncIndicator('offline'); return false; }
+  if(!ensureFirebaseApp()){ setSyncIndicator('offline'); return false; }
   const pull = await cloudPull();
   if(pull.ok){
     myMixes = mergeMixes(myMixes, pull.data || {});
@@ -801,18 +840,68 @@ document.getElementById('closeBtn').addEventListener('click', ()=>{ overlay.clas
 overlay.addEventListener('click', e=>{ if(e.target===overlay){ overlay.classList.remove('open'); render(); } });
 
 // ---------- Init ----------
-(async function init(){
+let appInitialized = false;
+async function loadLangAndApply(){
   let savedLang = await devGet('lang');
   if(savedLang !== 'en' && savedLang !== 'ar') savedLang = 'en';
   currentLang = savedLang;
   document.getElementById('htmlRoot').setAttribute('lang', savedLang);
   document.getElementById('htmlRoot').setAttribute('dir', STR[savedLang].dir);
-
-  await loadMyMixesLocal();
   applyStaticI18n();
+}
+async function initApp(){
+  if(appInitialized) return;
+  appInitialized = true;
+  await loadMyMixesLocal();
   render();
-
   doFullSync();
+}
+
+function showLogin(){
+  document.getElementById('appShell').style.display = 'none';
+  document.getElementById('loginOverlay').classList.add('open');
+}
+function showApp(){
+  document.getElementById('loginOverlay').classList.remove('open');
+  document.getElementById('appShell').style.display = 'block';
+  initApp();
+}
+
+const AUTH_ERROR_KEY = {
+  'auth/wrong-password':'loginErrBadCreds', 'auth/user-not-found':'loginErrBadCreds',
+  'auth/invalid-email':'loginErrBadCreds', 'auth/invalid-credential':'loginErrBadCreds',
+  'auth/too-many-requests':'loginErrThrottled', 'auth/network-request-failed':'loginErrNetwork'
+};
+const USERNAME_EMAIL_DOMAIN = 'printingink-login.app';
+function attemptLogin(){
+  const t = STR[currentLang];
+  const statusEl = document.getElementById('loginStatus');
+  const username = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPassword').value;
+  if(!username || !pass){ statusEl.textContent = t.loginErrEmpty; return; }
+  if(!ensureFirebaseApp()){ statusEl.textContent = t.loginErrNetwork; return; }
+  const email = username.includes('@') ? username : (username.replace(/[^a-z0-9._-]/g,'') + '@' + USERNAME_EMAIL_DOMAIN);
+  statusEl.textContent = t.loginSigningIn;
+  firebase.auth().signInWithEmailAndPassword(email, pass).catch(err=>{
+    statusEl.textContent = t[AUTH_ERROR_KEY[err.code]] || t.loginErrGeneric;
+  });
+}
+document.getElementById('loginSubmitBtn').addEventListener('click', attemptLogin);
+document.getElementById('loginEmail').addEventListener('keydown', e=>{ if(e.key==='Enter') attemptLogin(); });
+document.getElementById('loginPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') attemptLogin(); });
+
+document.getElementById('signOutBtn').addEventListener('click', ()=>{
+  if(fbUnsub){ fbUnsub(); fbUnsub = null; }
+  if(typeof firebase !== 'undefined') firebase.auth().signOut();
+});
+
+(async function initAuthGate(){
+  await loadLangAndApply();
+  if(!ensureFirebaseApp()){ showLogin(); return; }
+  firebase.auth().onAuthStateChanged(user=>{
+    if(user){ showApp(); }
+    else{ showLogin(); }
+  });
 })();
 </script>
 </body>
