@@ -32,7 +32,7 @@
     --sync:#0058a3;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{margin:0;padding:0; max-width:100%; overflow-x:hidden;}
   body{
     background:var(--paper);
     color:var(--ink);
@@ -128,7 +128,7 @@
 
   .overlay{ position:fixed; inset:0; background:rgba(20,20,20,0.6); display:none; align-items:center; justify-content:center; padding:20px; z-index:100; }
   .overlay.open{display:flex;}
-  .modal{ background:var(--paper); max-width:760px; width:100%; max-height:90vh; overflow-y:auto; border:2px solid var(--line); position:relative; }
+  .modal{ background:var(--paper); max-width:760px; width:100%; min-width:0; max-height:90vh; overflow-y:auto; border:2px solid var(--line); position:relative; box-sizing:border-box; }
   .modal.narrow{ max-width:560px; }
   .modal-head{ display:flex; }
   .modal-sw{width:170px; min-width:170px;}
@@ -156,8 +156,8 @@
   .mine-box{ border:1.5px solid var(--mine); padding:14px 14px 16px; margin-top:12px; }
   .mine-box .hdr{ display:flex; justify-content:space-between; align-items:center; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--mine); font-weight:700; margin-bottom:10px; }
   html[dir="rtl"] .mine-box .hdr{ letter-spacing:0; text-transform:none; }
-  .ing-row{ display:grid; grid-template-columns:1fr 70px 60px 24px; gap:6px; margin-bottom:6px; align-items:center;}
-  .ing-row input{ font-family:inherit; font-size:12px; padding:6px 7px; border:1px solid var(--line); background:#fff; color:var(--ink); }
+  .ing-row{ display:grid; grid-template-columns:1fr 70px 60px 24px; gap:6px; margin-bottom:6px; align-items:center; min-width:0;}
+  .ing-row input{ font-family:inherit; font-size:12px; padding:6px 7px; border:1px solid var(--line); background:#fff; color:var(--ink); width:100%; min-width:0; box-sizing:border-box; }
   .ing-row button{ border:1px solid var(--line); background:#fff; cursor:pointer; font-size:13px; padding:4px 0; }
   .add-ing-btn{ font-family:inherit; font-size:11px; border:1px dashed var(--line); background:none; padding:6px 10px; cursor:pointer; margin-top:2px; }
   textarea#mineNotes{ width:100%; font-family:inherit; font-size:12px; padding:8px; border:1px solid var(--line); background:#fff; color:var(--ink); margin-top:10px; min-height:56px; resize:vertical; }
