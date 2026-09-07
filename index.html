@@ -156,11 +156,14 @@
   .mine-box{ border:1.5px solid var(--mine); padding:14px 14px 16px; margin-top:12px; }
   .mine-box .hdr{ display:flex; justify-content:space-between; align-items:center; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--mine); font-weight:700; margin-bottom:10px; }
   html[dir="rtl"] .mine-box .hdr{ letter-spacing:0; text-transform:none; }
+  .prod-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
+  .prod-row input{ font-family:inherit; font-size:12px; padding:6px 7px; border:1px solid var(--line); background:#fff; color:var(--ink); width:100%; min-width:0; box-sizing:border-box; }
+  @media (max-width:640px){ .prod-row{ grid-template-columns:1fr 1fr; } .prod-row input:first-child{ grid-column:1 / -1; } }
   .ing-row{ display:grid; grid-template-columns:1fr 70px 60px 24px; gap:6px; margin-bottom:6px; align-items:center; min-width:0;}
   .ing-row input{ font-family:inherit; font-size:12px; padding:6px 7px; border:1px solid var(--line); background:#fff; color:var(--ink); width:100%; min-width:0; box-sizing:border-box; }
   .ing-row button{ border:1px solid var(--line); background:#fff; cursor:pointer; font-size:13px; padding:4px 0; }
   .add-ing-btn{ font-family:inherit; font-size:11px; border:1px dashed var(--line); background:none; padding:6px 10px; cursor:pointer; margin-top:2px; }
-  textarea#mineNotes{ width:100%; font-family:inherit; font-size:12px; padding:8px; border:1px solid var(--line); background:#fff; color:var(--ink); margin-top:10px; min-height:56px; resize:vertical; }
+  textarea.card-notes{ width:100%; font-family:inherit; font-size:12px; padding:8px; border:1px solid var(--line); background:#fff; color:var(--ink); margin-top:10px; min-height:56px; resize:vertical; box-sizing:border-box; }
   .mine-actions{ display:flex; gap:8px; margin-top:10px; align-items:center;}
   .save-btn{ font-family:inherit; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; background:var(--mine); color:#fff; border:none; padding:9px 14px; cursor:pointer; }
   html[dir="rtl"] .save-btn{ letter-spacing:0; text-transform:none; }
@@ -224,7 +227,7 @@
     .ing-row .rm-ing{ grid-area:rm; }
 
     .sync-field input, .sync-field textarea{ font-size:16px; } /* prevents iOS auto-zoom on focus */
-    input#search, .ing-row input, #loginEmail, #loginPassword, #mineNotes{ font-size:16px; }
+    input#search, .ing-row input, .prod-row input, .card-notes, #loginEmail, #loginPassword{ font-size:16px; }
   }
 </style>
 </head>
@@ -262,10 +265,6 @@
   <button class="fam-btn coll-btn active" data-coll="all" data-i18n="coll_all">All</button>
   <button class="fam-btn coll-btn" data-coll="coated" data-i18n="coll_coated">Solid Coated</button>
   <button class="fam-btn coll-btn" data-coll="uncoated" data-i18n="coll_uncoated">Solid Uncoated</button>
-  <button class="fam-btn coll-btn" data-coll="tcx" data-i18n="coll_tcx">TCX Fashion/Home</button>
-  <button class="fam-btn coll-btn" data-coll="metallic" data-i18n="coll_metallic">Metallic</button>
-  <button class="fam-btn coll-btn" data-coll="pastel-neon" data-i18n="coll_pastel">Pastels &amp; Neons</button>
-  <button class="fam-btn coll-btn" data-coll="skin" data-i18n="coll_skin">Skin Tones</button>
 </div>
 
 <main>
@@ -318,19 +317,11 @@
       <div class="note" id="mixNote"></div>
 
       <div class="section-label" style="border-top:none; margin-top:22px;">
-        <span data-i18n="yourMixHeader">Your mixing formula</span>
+        <span data-i18n="yourMixHeader">Your saved mixes for this color</span>
         <span class="saved-flash" id="savedFlash"></span>
       </div>
-      <div class="mine-box">
-        <div class="hdr"><span id="mineStatus">Not saved yet</span></div>
-        <div id="ingList"></div>
-        <button class="add-ing-btn" id="addIngBtn" data-i18n="addIngredient">+ add ingredient</button>
-        <textarea id="mineNotes"></textarea>
-        <div class="mine-actions">
-          <button class="save-btn" id="saveMineBtn" data-i18n="save">Save my mix</button>
-          <button class="clear-btn" id="clearMineBtn" data-i18n="delete">Delete</button>
-        </div>
-      </div>
+      <div id="mixCards"></div>
+      <button class="add-ing-btn" id="addMixBtn" data-i18n="addMix" style="margin-top:4px;">+ add a mix</button>
 
       <div class="disclaimer" id="modalDisclaimer"></div>
     </div>
@@ -363,7 +354,7 @@ const STR = {
     title:'Pantone Explorer',
     tagline:'Reference Colors & Your Mixing Formulas',
     swatchesShown:' swatches shown',
-    searchPlaceholder:'Search by code, e.g. 185…',
+    searchPlaceholder:'Search by code, product, or company…',
     fam_all:'All', fam_red:'Red', fam_orange:'Orange', fam_yellow:'Yellow', fam_green:'Green',
     fam_blue:'Blue', fam_purple:'Purple', fam_pink:'Pink', fam_neutral:'Neutral', fam_mine:'● My Mixes',
     collLabel:'Collection:',
@@ -371,7 +362,9 @@ const STR = {
     coll_metallic:'Metallic', coll_pastel:'Pastels & Neons', coll_skin:'Skin Tones',
     noMatch:'No colors match that search.',
     refMixHeader:'Reference mixing guide (computed, approximate)',
-    yourMixHeader:'Your mixing formula',
+    yourMixHeader:'Your saved mixes for this color',
+    prodCodeLabel:'Product code', prodNameLabel:'Product name', companyLabel:'Company / client',
+    addMix:'+ add a mix', noMixesYet:'No mixes saved yet for this color.',
     notSaved:'Not saved yet',
     notSavedHint:'Not saved yet — add your formula below',
     savedPrefix:'Saved',
@@ -393,7 +386,7 @@ const STR = {
     mixMid:'start with the hue mix, then nudge value with white or black',
     mixFull:(b1,b2)=>`Start ${b1}. To match this color, ${b2}, then compare against a dry swatch — pigments usually shift a shade darker as they dry.`,
     modalDisclaimer:'Reference recipe is computed from hue, saturation and lightness using a simplified red/yellow/blue/white/black pigment model — a starting ratio to adjust by eye, not an exact match. Your saved formula is kept separately so you can compare the two side by side.',
-    footer:`This library covers 5,533 reference codes across six Pantone product lines — Solid Coated, Solid Uncoated, TCX Fashion + Home, Metallics, Pastels & Neons, and Skin Tones — drawn from widely circulated, community-published PMS-to-hex conversion tables, not Pantone Inc.'s own certified digital standard. Pantone's full commercial system (specialty finishes, later chip additions, GoeSystem, and every reprinted edition) is proprietary and licensed — it isn't available as an open dataset anywhere, at any count. Treat hex/CMYK values here as a close approximation for screen and general reference, not a substitute for a physical Pantone guide when exact color matching matters. The "reference mixing" guide is a simplified red/yellow/blue/white/black pigment estimate, not an official Pantone ink formula. Anything you save under "My Mixes" automatically syncs to this workspace's own Firebase project (visible in the ☁ status in the corner) so it stays the same across every computer that opens this file.`,
+    footer:`This library covers 2,682 reference codes across Pantone's Solid Coated and Solid Uncoated collections, drawn from widely circulated, community-published PMS-to-hex conversion tables, not Pantone Inc.'s own certified digital standard. Pantone's full commercial system (TCX fashion/home, metallics, pastels & neons, skin tones, specialty finishes, and every reprinted edition) is proprietary and licensed — it isn't available as an open dataset anywhere, at any count. Treat hex/CMYK values here as a close approximation for screen and general reference, not a substitute for a physical Pantone guide when exact color matching matters. The "reference mixing" guide is a simplified red/yellow/blue/white/black pigment estimate, not an official Pantone ink formula. Anything you save under "My Mixes" automatically syncs to this workspace's own Firebase project (visible in the ☁ status in the corner) so it stays the same across every computer that opens this file.`,
     langBtn:'العربية',
     syncIndSyncing:'☁ syncing…', syncIndSynced:'☁ synced', syncIndOffline:'☁ offline (saved locally)',
     signOut:'Sign out',
@@ -411,7 +404,7 @@ const STR = {
     title:'مستكشف بانتون',
     tagline:'ألوان مرجعية وصيغ الخلط الخاصة بك',
     swatchesShown:' لونًا معروضًا',
-    searchPlaceholder:'ابحث بالرمز، مثل 185…',
+    searchPlaceholder:'ابحث بالرمز أو المنتج أو الشركة…',
     fam_all:'الكل', fam_red:'أحمر', fam_orange:'برتقالي', fam_yellow:'أصفر', fam_green:'أخضر',
     fam_blue:'أزرق', fam_purple:'بنفسجي', fam_pink:'وردي', fam_neutral:'محايد', fam_mine:'● خلطاتي',
     collLabel:'المجموعة:',
@@ -419,7 +412,9 @@ const STR = {
     coll_metallic:'معدني', coll_pastel:'باستيل ونيون', coll_skin:'درجات لون البشرة',
     noMatch:'لا توجد ألوان مطابقة لهذا البحث.',
     refMixHeader:'دليل الخلط المرجعي (محسوب وتقريبي)',
-    yourMixHeader:'صيغة الخلط الخاصة بك',
+    yourMixHeader:'خلطاتك المحفوظة لهذا اللون',
+    prodCodeLabel:'رمز المنتج', prodNameLabel:'اسم المنتج', companyLabel:'الشركة / العميل',
+    addMix:'+ إضافة خلطة', noMixesYet:'لا توجد خلطات محفوظة لهذا اللون بعد.',
     notSaved:'لم تُحفظ بعد',
     notSavedHint:'لم تُحفظ بعد — أضف صيغتك أدناه',
     savedPrefix:'تم الحفظ',
@@ -441,7 +436,7 @@ const STR = {
     mixMid:'ابدأ بخلطة درجة اللون، ثم اضبط الفاتح والغامق بالأبيض أو الأسود',
     mixFull:(b1,b2)=>`ابدأ ${b1}. لمطابقة هذا اللون، ${b2}، ثم قارنه بعيّنة جافة — فالأصباغ عادةً تصبح أغمق درجة بعد الجفاف.`,
     modalDisclaimer:'تُحسب الوصفة المرجعية بناءً على درجة اللون والتشبع والإضاءة باستخدام نموذج تقريبي مبسّط (أحمر/أصفر/أزرق/أبيض/أسود) — كنسبة بداية تُضبط بالعين، وليست تطابقًا دقيقًا. تُحفظ صيغتك بشكل منفصل لمقارنة الاثنتين جنبًا إلى جنب.',
-    footer:'تضم هذه المكتبة 5,533 رمزًا مرجعيًا عبر ست مجموعات من منتجات بانتون — Solid Coated وSolid Uncoated وTCX للأزياء والمنسوجات والمعادن والباستيل والنيون ودرجات لون البشرة — مأخوذة من جداول تحويل PMS إلى Hex منشورة ومتداولة على نطاق واسع، وليست المعيار الرقمي المعتمد رسميًا من شركة بانتون. نظام بانتون التجاري الكامل مملوك ومرخّص تجاريًا — وغير متاح كمجموعة بيانات مفتوحة بأي عدد. تعامل مع قيم Hex وCMYK هنا كتقريب قريب، وليست بديلاً عن دليل بانتون الفعلي عند الحاجة لمطابقة دقيقة. "دليل الخلط المرجعي" تقدير تقريبي وليس صيغة حبر رسمية من بانتون. كل ما تحفظه ضمن "خلطاتي" يُزامَن تلقائيًا مع مشروع Firebase الخاص بهذا العمل (تراه في مؤشر ☁ في الزاوية) ليبقى نفسه على كل جهاز يفتح هذا الملف.',
+    footer:'تضم هذه المكتبة 2,682 رمزًا مرجعيًا عبر مجموعتَي Solid Coated وSolid Uncoated من بانتون، مأخوذة من جداول تحويل PMS إلى Hex منشورة ومتداولة على نطاق واسع، وليست المعيار الرقمي المعتمد رسميًا من شركة بانتون. نظام بانتون التجاري الكامل (TCX للأزياء والمنزل، والمعادن، والباستيل والنيون، ودرجات لون البشرة، والتشطيبات الخاصة) مملوك ومرخّص تجاريًا — وغير متاح كمجموعة بيانات مفتوحة بأي عدد. تعامل مع قيم Hex وCMYK هنا كتقريب قريب، وليست بديلاً عن دليل بانتون الفعلي عند الحاجة لمطابقة دقيقة. "دليل الخلط المرجعي" تقدير تقريبي وليس صيغة حبر رسمية من بانتون. كل ما تحفظه ضمن "خلطاتي" يُزامَن تلقائيًا مع مشروع Firebase الخاص بهذا العمل (تراه في مؤشر ☁ في الزاوية) ليبقى نفسه على كل جهاز يفتح هذا الملف.',
     langBtn:'English',
     syncIndSyncing:'☁ جارٍ المزامنة…', syncIndSynced:'☁ متزامن', syncIndOffline:'☁ غير متصل (محفوظ محليًا)',
     signOut:'تسجيل الخروج',
@@ -467,7 +462,6 @@ function applyStaticI18n(){
   document.getElementById('langToggle').textContent = t.langBtn;
   document.getElementById('cmykLabel').textContent = t.cmykLabel;
   document.getElementById('modalDisclaimer').textContent = t.modalDisclaimer;
-  document.getElementById('mineNotes').placeholder = t.notesPlaceholder;
   setSyncIndicator(currentSyncState);
 }
 
@@ -589,17 +583,36 @@ const FIREBASE_CONFIG = {
 };
 const SYNC_CODE = "printingink-mixes";
 
-let myMixes = {};          // code -> {ingredients, notes, updated, deleted}
+let myMixes = {};          // code -> [ {id, productCode, productName, company, ingredients, notes, updated, deleted}, ... ]
 let myMixCodesSet = new Set();
 let fbApp = null, fbDb = null, fbUnsub = null;
 let currentSyncState = 'syncing';
 
+function uid(){ return 'm_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+
+// Converts old "one mix per code" shape into the new array-of-mixes shape.
+// Safe to run on already-migrated data (arrays pass through unchanged).
+function migrateMixShape(raw){
+  const out = {};
+  for(const code in (raw||{})){
+    const v = raw[code];
+    if(Array.isArray(v)){ out[code] = v; }
+    else if(v && typeof v === 'object'){
+      out[code] = v.deleted ? [] : [{
+        id: uid(), productCode:'', productName:'', company:'',
+        ingredients: v.ingredients || [], notes: v.notes || '', updated: v.updated || '', deleted:false
+      }];
+    }
+  }
+  return out;
+}
+
 function recomputeMixCodesSet(){
-  myMixCodesSet = new Set(Object.keys(myMixes).filter(c => myMixes[c] && !myMixes[c].deleted));
+  myMixCodesSet = new Set(Object.keys(myMixes).filter(c => Array.isArray(myMixes[c]) && myMixes[c].some(e => e && !e.deleted)));
 }
 async function loadMyMixesLocal(){
   const raw = await devGet('myMixesData');
-  try{ myMixes = raw ? JSON.parse(raw) : {}; }catch(e){ myMixes = {}; }
+  try{ myMixes = migrateMixShape(raw ? JSON.parse(raw) : {}); }catch(e){ myMixes = {}; }
   recomputeMixCodesSet();
 }
 async function saveMyMixesLocal(){
@@ -607,14 +620,21 @@ async function saveMyMixesLocal(){
   recomputeMixCodesSet();
 }
 
+function mergeEntryArrays(localArr, cloudArr){
+  const map = {};
+  (localArr||[]).forEach(e=>{ if(e && e.id) map[e.id] = e; });
+  (cloudArr||[]).forEach(e=>{
+    if(!e || !e.id) return;
+    const l = map[e.id];
+    if(!l || (e.updated||'') >= (l.updated||'')) map[e.id] = e;
+  });
+  return Object.values(map);
+}
 function mergeMixes(local, cloud){
-  const merged = Object.assign({}, local);
-  for(const code in cloud){
-    const c = cloud[code];
-    const l = local[code];
-    if(!l) merged[code] = c;
-    else if((c.updated||'') >= (l.updated||'')) merged[code] = c;
-  }
+  local = migrateMixShape(local); cloud = migrateMixShape(cloud);
+  const merged = {};
+  const codes = new Set([...Object.keys(local||{}), ...Object.keys(cloud||{})]);
+  codes.forEach(code=>{ merged[code] = mergeEntryArrays(local[code], cloud[code]); });
   return merged;
 }
 
@@ -699,17 +719,34 @@ const countNum = document.getElementById('countNum');
 let activeFam = 'all';
 let activeColl = 'all';
 let query = '';
+// Collections kept in the data file but not shown to this workspace right now.
+// To bring one back later: remove it from this list (and re-add its filter button).
+const HIDDEN_COLLECTIONS = new Set(['tcx', 'metallic', 'pastel-neon', 'skin']);
 const COLL_KEY = {
   coated:'coll_coated', uncoated:'coll_uncoated', tcx:'coll_tcx',
   metallic:'coll_metallic', 'pastel-neon':'coll_pastel', skin:'coll_skin'
 };
 
+function codeMatchesQuery(code, q){
+  if(!q) return true;
+  if(code.toLowerCase().includes(q)) return true;
+  const entries = myMixes[code];
+  if(Array.isArray(entries)){
+    return entries.some(e => e && !e.deleted && (
+      (e.productCode||'').toLowerCase().includes(q) ||
+      (e.productName||'').toLowerCase().includes(q) ||
+      (e.company||'').toLowerCase().includes(q)
+    ));
+  }
+  return false;
+}
+
 function render(){
   const q = query.trim().toLowerCase();
   const filtered = COLORS.filter(c=>{
     const [code, hex, coll] = c;
-    const qOk = !q || code.toLowerCase().includes(q);
-    if(!qOk) return false;
+    if(HIDDEN_COLLECTIONS.has(coll)) return false;
+    if(!codeMatchesQuery(code, q)) return false;
     if(activeColl !== 'all' && coll !== activeColl) return false;
     if(activeFam === 'mine') return myMixCodesSet.has(code);
     if(activeFam === 'all') return true;
@@ -757,26 +794,143 @@ document.querySelectorAll('.coll-btn').forEach(btn=>{
 const overlay = document.getElementById('overlay');
 let currentCode = null;
 let currentColorEntry = null;
-let ingRows = [];
+let openCards = []; // in-memory editable list of {id, productCode, productName, company, ingredients:[{id,name,amount,unit}], notes, updated}
 
-function removeIngRow(id){ ingRows = ingRows.filter(r=>r.id!==id); renderIngRows(); }
-function renderIngRows(){
-  const t = STR[currentLang];
-  const list = document.getElementById('ingList');
-  list.innerHTML = ingRows.map(r=>`
-    <div class="ing-row" data-id="${r.id}">
-      <input type="text" class="ing-name" placeholder="${t.ingNamePh}" value="${(r.name||'').replace(/"/g,'&quot;')}">
-      <input type="text" class="ing-amount ltr" placeholder="${t.ingAmtPh}" value="${r.amount||''}">
-      <input type="text" class="ing-unit" placeholder="${t.ingUnitPh}" value="${r.unit||''}">
+function escHtml(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function ingRowHTML(i, t){
+  return `<div class="ing-row" data-id="${i.id}">
+      <input type="text" class="ing-name" placeholder="${t.ingNamePh}" value="${escHtml(i.name)}">
+      <input type="text" class="ing-amount ltr" placeholder="${t.ingAmtPh}" value="${escHtml(i.amount)}">
+      <input type="text" class="ing-unit" placeholder="${t.ingUnitPh}" value="${escHtml(i.unit)}">
       <button class="rm-ing" title="✕">✕</button>
-    </div>`).join('');
-  list.querySelectorAll('.rm-ing').forEach(btn=>{
+    </div>`;
+}
+
+function cardHTML(card, t){
+  const statusText = card.updated ? (t.savedPrefix + ' · ' + card.updated) : t.notSavedHint;
+  return `<div class="mine-box" data-card-id="${card.id}">
+    <div class="hdr"><span class="card-status">${statusText}</span><span class="saved-flash card-flash"></span></div>
+    <div class="prod-row">
+      <input type="text" class="prod-code" placeholder="${t.prodCodeLabel}" value="${escHtml(card.productCode)}">
+      <input type="text" class="prod-name" placeholder="${t.prodNameLabel}" value="${escHtml(card.productName)}">
+      <input type="text" class="prod-company" placeholder="${t.companyLabel}" value="${escHtml(card.company)}">
+    </div>
+    <div class="ing-list">${card.ingredients.map(i=>ingRowHTML(i,t)).join('')}</div>
+    <button class="add-ing-btn add-ing-card" type="button">${t.addIngredient}</button>
+    <textarea class="card-notes" placeholder="${t.notesPlaceholder}">${escHtml(card.notes)}</textarea>
+    <div class="mine-actions">
+      <button class="save-btn card-save" type="button">${t.save}</button>
+      <button class="clear-btn card-delete" type="button">${t.delete}</button>
+    </div>
+  </div>`;
+}
+
+function syncCardFromDom(cardId){
+  const card = openCards.find(c=>c.id===cardId);
+  const root = document.querySelector(`[data-card-id="${cardId}"]`);
+  if(!card || !root) return;
+  card.productCode = root.querySelector('.prod-code').value.trim();
+  card.productName = root.querySelector('.prod-name').value.trim();
+  card.company = root.querySelector('.prod-company').value.trim();
+  card.notes = root.querySelector('.card-notes').value.trim();
+  card.ingredients = Array.from(root.querySelectorAll('.ing-row')).map(row=>({
+    id: row.dataset.id,
+    name: row.querySelector('.ing-name').value.trim(),
+    amount: row.querySelector('.ing-amount').value.trim(),
+    unit: row.querySelector('.ing-unit').value.trim(),
+  }));
+}
+
+function updateCardDom(cardId){
+  const card = openCards.find(c=>c.id===cardId);
+  const el = document.querySelector(`[data-card-id="${cardId}"]`);
+  if(!card || !el) return;
+  const temp = document.createElement('div');
+  temp.innerHTML = cardHTML(card, STR[currentLang]);
+  el.replaceWith(temp.firstElementChild);
+  wireCardEvents(cardId);
+}
+
+function wireCardEvents(cardId){
+  const root = document.querySelector(`[data-card-id="${cardId}"]`);
+  if(!root) return;
+  root.querySelector('.add-ing-card').addEventListener('click', ()=>{
+    syncCardFromDom(cardId);
+    const card = openCards.find(c=>c.id===cardId);
+    card.ingredients.push({id:uid(), name:'', amount:'', unit:''});
+    updateCardDom(cardId);
+  });
+  root.querySelectorAll('.rm-ing').forEach(btn=>{
     btn.addEventListener('click', e=>{
-      const id = e.target.closest('.ing-row').dataset.id;
-      removeIngRow(id);
+      const rowId = e.target.closest('.ing-row').dataset.id;
+      syncCardFromDom(cardId);
+      const card = openCards.find(c=>c.id===cardId);
+      card.ingredients = card.ingredients.filter(i=>i.id!==rowId);
+      if(card.ingredients.length===0) card.ingredients=[{id:uid(),name:'',amount:'',unit:''}];
+      updateCardDom(cardId);
     });
   });
+  root.querySelector('.card-save').addEventListener('click', ()=>saveCard(cardId));
+  root.querySelector('.card-delete').addEventListener('click', ()=>deleteCard(cardId));
 }
+
+function saveCard(cardId){
+  const t = STR[currentLang];
+  syncCardFromDom(cardId);
+  const card = openCards.find(c=>c.id===cardId);
+  if(!card) return;
+  const cleanIngredients = card.ingredients.filter(i=>i.name || i.amount);
+  const hasContent = card.productCode || card.productName || card.company || card.notes || cleanIngredients.length;
+  const flashEl = document.querySelector(`[data-card-id="${cardId}"] .card-flash`);
+  if(!hasContent){ if(flashEl) flashEl.textContent = t.nothingToSave; return; }
+  const updated = new Date().toISOString().slice(0,10);
+  card.updated = updated;
+  const record = {
+    id: card.id, productCode: card.productCode, productName: card.productName, company: card.company,
+    ingredients: cleanIngredients.map(i=>({name:i.name, amount:i.amount, unit:i.unit})),
+    notes: card.notes, updated, deleted:false
+  };
+  if(!myMixes[currentCode]) myMixes[currentCode] = [];
+  const idx = myMixes[currentCode].findIndex(e=>e.id===card.id);
+  if(idx>=0) myMixes[currentCode][idx] = record; else myMixes[currentCode].push(record);
+  saveMyMixesLocal();
+  render();
+  if(flashEl) flashEl.textContent = t.savedFlash;
+  const statusEl = document.querySelector(`[data-card-id="${cardId}"] .card-status`);
+  if(statusEl) statusEl.textContent = t.savedPrefix + ' · ' + updated;
+  cloudPush();
+}
+
+function deleteCard(cardId){
+  const t = STR[currentLang];
+  if(myMixes[currentCode]){
+    const idx = myMixes[currentCode].findIndex(e=>e.id===cardId);
+    if(idx>=0){ myMixes[currentCode][idx].deleted = true; myMixes[currentCode][idx].updated = new Date().toISOString().slice(0,10); }
+  }
+  openCards = openCards.filter(c=>c.id!==cardId);
+  saveMyMixesLocal();
+  render();
+  const el = document.querySelector(`[data-card-id="${cardId}"]`);
+  if(el) el.remove();
+  if(openCards.length===0){
+    document.getElementById('mixCards').innerHTML = `<div class="mine-empty">${t.noMixesYet}</div>`;
+  }
+  cloudPush();
+}
+
+function addNewCard(){
+  const card = {id:uid(), productCode:'', productName:'', company:'', ingredients:[{id:uid(),name:'',amount:'',unit:''}], notes:'', updated:''};
+  const wasEmpty = openCards.length === 0;
+  openCards.push(card);
+  const container = document.getElementById('mixCards');
+  if(wasEmpty) container.innerHTML = '';
+  container.insertAdjacentHTML('beforeend', cardHTML(card, STR[currentLang]));
+  wireCardEvents(card.id);
+}
+document.getElementById('addMixBtn').addEventListener('click', addNewCard);
 
 function openModal(c){
   const t = STR[currentLang];
@@ -815,64 +969,21 @@ function openModal(c){
   document.getElementById('mixNote').textContent = t.mixFull(bit1, bit2);
   document.getElementById('modalDisclaimer').textContent = t.modalDisclaimer;
 
-  document.getElementById('savedFlash').textContent = '';
-  const mine = myMixes[code] && !myMixes[code].deleted ? myMixes[code] : null;
-  ingRows = [];
-  if(mine && mine.ingredients && mine.ingredients.length){
-    mine.ingredients.forEach(ing=>ingRows.push({id:'ing_'+Math.random().toString(36).slice(2,9), name:ing.name||'', amount:ing.amount||'', unit:ing.unit||''}));
-  } else {
-    ingRows.push({id:'ing_'+Math.random().toString(36).slice(2,9), name:'', amount:'', unit:''});
-  }
-  renderIngRows();
-  document.getElementById('mineNotes').value = mine ? (mine.notes||'') : '';
-  document.getElementById('mineNotes').placeholder = t.notesPlaceholder;
-  document.getElementById('mineStatus').textContent = mine ? (t.savedPrefix + (mine.updated ? ' · '+mine.updated : '')) : t.notSavedHint;
-  document.getElementById('clearMineBtn').style.display = mine ? 'inline-block' : 'none';
+  const rawArr = Array.isArray(myMixes[code]) ? myMixes[code] : [];
+  openCards = rawArr.filter(e=>e && !e.deleted).map(e=>({
+    id: e.id || uid(),
+    productCode: e.productCode || '', productName: e.productName || '', company: e.company || '',
+    ingredients: (e.ingredients && e.ingredients.length)
+      ? e.ingredients.map(i=>({id:uid(), name:i.name||'', amount:i.amount||'', unit:i.unit||''}))
+      : [{id:uid(), name:'', amount:'', unit:''}],
+    notes: e.notes || '', updated: e.updated || ''
+  }));
+  const container = document.getElementById('mixCards');
+  container.innerHTML = openCards.length ? openCards.map(c2=>cardHTML(c2,t)).join('') : `<div class="mine-empty">${t.noMixesYet}</div>`;
+  openCards.forEach(c2=>wireCardEvents(c2.id));
 
   overlay.classList.add('open');
 }
-
-document.getElementById('addIngBtn').addEventListener('click', ()=>{
-  ingRows.push({id:'ing_'+Math.random().toString(36).slice(2,9), name:'', amount:'', unit:''});
-  renderIngRows();
-});
-
-document.getElementById('saveMineBtn').addEventListener('click', async ()=>{
-  const t = STR[currentLang];
-  const rows = Array.from(document.querySelectorAll('.ing-row')).map(row=>({
-    name: row.querySelector('.ing-name').value.trim(),
-    amount: row.querySelector('.ing-amount').value.trim(),
-    unit: row.querySelector('.ing-unit').value.trim(),
-  })).filter(r=>r.name || r.amount);
-  const notes = document.getElementById('mineNotes').value.trim();
-  if(rows.length===0 && !notes){
-    document.getElementById('savedFlash').textContent = t.nothingToSave;
-    return;
-  }
-  const updated = new Date().toISOString().slice(0,10);
-  myMixes[currentCode] = { ingredients: rows, notes, updated, deleted:false };
-  await saveMyMixesLocal();
-  document.getElementById('savedFlash').textContent = t.savedFlash;
-  document.getElementById('mineStatus').textContent = t.savedPrefix + ' · ' + updated;
-  document.getElementById('clearMineBtn').style.display = 'inline-block';
-  render();
-  cloudPush();
-});
-
-document.getElementById('clearMineBtn').addEventListener('click', async ()=>{
-  const t = STR[currentLang];
-  if(!currentCode) return;
-  myMixes[currentCode] = { deleted:true, updated: new Date().toISOString().slice(0,10) };
-  await saveMyMixesLocal();
-  ingRows = [{id:'ing_'+Math.random().toString(36).slice(2,9), name:'', amount:'', unit:''}];
-  renderIngRows();
-  document.getElementById('mineNotes').value = '';
-  document.getElementById('mineStatus').textContent = t.notSavedHint;
-  document.getElementById('savedFlash').textContent = t.deletedFlash;
-  document.getElementById('clearMineBtn').style.display = 'none';
-  render();
-  cloudPush();
-});
 
 document.getElementById('closeBtn').addEventListener('click', ()=>{ overlay.classList.remove('open'); render(); });
 overlay.addEventListener('click', e=>{ if(e.target===overlay){ overlay.classList.remove('open'); render(); } });
