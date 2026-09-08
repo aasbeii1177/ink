@@ -245,6 +245,7 @@
     <div class="swatch-count"><b id="countNum">—</b><span data-i18n="swatchesShown">swatches shown</span></div>
     <span class="swatch-count ltr" id="syncIndicator" style="font-size:10px;"></span>
     <input type="file" id="importFileInput" accept=".json" style="display:none;">
+    <button id="newColorBtn" type="button" data-i18n="newColorBtn" style="border:1.5px solid var(--mine); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--mine);">+ New Color</button>
     <button id="importBtn" type="button" data-i18n="importBtn" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Import</button>
     <button id="signOutBtn" type="button" data-i18n="signOut" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Sign out</button>
     <button id="langToggle" type="button">العربية</button>
@@ -268,7 +269,6 @@
   <span class="coll-label" data-i18n="collLabel">Collection:</span>
   <button class="fam-btn coll-btn active" data-coll="all" data-i18n="coll_all">All</button>
   <button class="fam-btn coll-btn" data-coll="coated" data-i18n="coll_coated">Solid Coated</button>
-  <button class="fam-btn coll-btn" data-coll="uncoated" data-i18n="coll_uncoated">Solid Uncoated</button>
   <button class="fam-btn coll-btn" data-coll="custom" data-i18n="coll_custom">Custom / Unlisted</button>
 </div>
 
@@ -397,6 +397,10 @@ const STR = {
     syncIndSyncing:'☁ syncing…', syncIndSynced:'☁ synced', syncIndOffline:'☁ offline (saved locally)',
     signOut:'Sign out',
     importBtn:'Import',
+    newColorBtn:'+ New Color',
+    newColorPrompt:'Name or code for this new color (e.g. a product name, or your own reference code):',
+    newColorEmpty:'Enter a name or code first.',
+    newColorDuplicate:(code)=>`"${code}" already exists — opening it instead.`,
     importConfirm:(n,codes)=>`Import ${n} saved mixes across ${codes} colors? This merges into your existing data — nothing already saved gets deleted.`,
     importDone:(n,codes)=>`Imported ${n} mixes across ${codes} colors.`,
     importBadFile:'That file could not be read as a valid mixes export.',
@@ -452,6 +456,10 @@ const STR = {
     syncIndSyncing:'☁ جارٍ المزامنة…', syncIndSynced:'☁ متزامن', syncIndOffline:'☁ غير متصل (محفوظ محليًا)',
     signOut:'تسجيل الخروج',
     importBtn:'استيراد',
+    newColorBtn:'+ لون جديد',
+    newColorPrompt:'اسم أو رمز لهذا اللون الجديد (مثل اسم منتج، أو رمزك المرجعي الخاص):',
+    newColorEmpty:'أدخل اسمًا أو رمزًا أولاً.',
+    newColorDuplicate:(code)=>`"${code}" موجود بالفعل — سيتم فتحه بدلاً من ذلك.`,
     importConfirm:(n,codes)=>`استيراد ${n} خلطة محفوظة عبر ${codes} لونًا؟ سيتم الدمج مع بياناتك الحالية — لن يُحذف أي شيء محفوظ مسبقًا.`,
     importDone:(n,codes)=>`تم استيراد ${n} خلطة عبر ${codes} لونًا.`,
     importBadFile:'تعذّرت قراءة هذا الملف كملف تصدير خلطات صالح.',
@@ -585,6 +593,7 @@ function mixRecipe(hex){
   return parts;
 }
 const SWATCH_COLOR = { red:'#C8102E', yellow:'#FEDD00', blue:'#0033A0', white:'#F4F1EA', black:'#2D2926' };
+const CUSTOM_COLOR_PLACEHOLDER_HEX = '#B8B5AE';
 
 // ---------- My mixes: single consolidated store + cloud sync ----------
 // ---------- Cloud sync: hardcoded to this project, no user setup needed ----------
@@ -635,6 +644,35 @@ async function saveMyMixesLocal(){
   recomputeMixCodesSet();
 }
 
+// ---------- Custom colors created in-app (admin only) ----------
+let customColors = {}; // code -> {hex, updated}
+let ALL_COLORS = COLORS;
+
+function rebuildAllColors(){
+  const knownCodes = new Set(COLORS.map(c=>c[0]));
+  const extra = Object.keys(customColors)
+    .filter(code => !knownCodes.has(code))
+    .map(code => [code, customColors[code].hex, 'custom']);
+  ALL_COLORS = COLORS.concat(extra);
+}
+async function loadCustomColorsLocal(){
+  const raw = await devGet('customColorsData');
+  try{ customColors = raw ? JSON.parse(raw) : {}; }catch(e){ customColors = {}; }
+  rebuildAllColors();
+}
+async function saveCustomColorsLocal(){
+  await devSet('customColorsData', JSON.stringify(customColors));
+  rebuildAllColors();
+}
+function mergeCustomColors(local, cloud){
+  const merged = Object.assign({}, local||{});
+  for(const code in (cloud||{})){
+    const c = cloud[code], l = merged[code];
+    if(!l || (c.updated||'') >= (l.updated||'')) merged[code] = c;
+  }
+  return merged;
+}
+
 function mergeEntryArrays(localArr, cloudArr){
   const map = {};
   (localArr||[]).forEach(e=>{ if(e && e.id) map[e.id] = e; });
@@ -672,7 +710,7 @@ async function cloudPush(){
   const ref = fbDocRef();
   if(!ref) return {ok:false, reason:'not-configured'};
   try{
-    await ref.set({ data: myMixes, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    await ref.set({ data: myMixes, customColors: customColors, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
     return {ok:true};
   }catch(e){ return {ok:false, reason: (e && e.code==='permission-denied') ? 'rules' : 'error'}; }
 }
@@ -681,7 +719,8 @@ async function cloudPull(){
   if(!ref) return {ok:false, reason:'not-configured'};
   try{
     const snap = await ref.get();
-    return {ok:true, data: snap.exists ? (snap.data().data || {}) : {}};
+    const d = snap.exists ? snap.data() : {};
+    return {ok:true, data: d.data || {}, customColors: d.customColors || {}};
   }catch(e){ return {ok:false, reason: (e && e.code==='permission-denied') ? 'rules' : 'error'}; }
 }
 
@@ -691,13 +730,15 @@ function startRealtimeListener(){
   if(fbUnsub) fbUnsub();
   fbUnsub = ref.onSnapshot(snap=>{
     if(!snap.exists || snap.metadata.hasPendingWrites) return;
-    const cloudData = snap.data().data || {};
+    const d = snap.data();
+    const cloudData = d.data || {};
+    const cloudCustom = d.customColors || {};
     const merged = mergeMixes(myMixes, cloudData);
-    if(JSON.stringify(merged) !== JSON.stringify(myMixes)){
-      myMixes = merged;
-      saveMyMixesLocal();
-      render();
-    }
+    const mergedCustom = mergeCustomColors(customColors, cloudCustom);
+    let changed = false;
+    if(JSON.stringify(merged) !== JSON.stringify(myMixes)){ myMixes = merged; saveMyMixesLocal(); changed = true; }
+    if(JSON.stringify(mergedCustom) !== JSON.stringify(customColors)){ customColors = mergedCustom; saveCustomColorsLocal(); changed = true; }
+    if(changed) render();
     setSyncIndicator('synced');
   }, ()=>{ setSyncIndicator('offline'); });
 }
@@ -719,6 +760,8 @@ async function doFullSync(){
   if(pull.ok){
     myMixes = mergeMixes(myMixes, pull.data || {});
     await saveMyMixesLocal();
+    customColors = mergeCustomColors(customColors, pull.customColors || {});
+    await saveCustomColorsLocal();
   }
   const push = await cloudPush();
   if(!push.ok && !pull.ok){ setSyncIndicator('offline'); return false; }
@@ -736,7 +779,7 @@ let activeColl = 'all';
 let query = '';
 // Collections kept in the data file but not shown to this workspace right now.
 // To bring one back later: remove it from this list (and re-add its filter button).
-const HIDDEN_COLLECTIONS = new Set(['tcx', 'metallic', 'pastel-neon', 'skin']);
+const HIDDEN_COLLECTIONS = new Set(['uncoated', 'tcx', 'metallic', 'pastel-neon', 'skin']);
 const COLL_KEY = {
   coated:'coll_coated', uncoated:'coll_uncoated', custom:'coll_custom', tcx:'coll_tcx',
   metallic:'coll_metallic', 'pastel-neon':'coll_pastel', skin:'coll_skin'
@@ -758,7 +801,7 @@ function codeMatchesQuery(code, q){
 
 function render(){
   const q = query.trim().toLowerCase();
-  const filtered = COLORS.filter(c=>{
+  const filtered = ALL_COLORS.filter(c=>{
     const [code, hex, coll] = c;
     if(HIDDEN_COLLECTIONS.has(coll)) return false;
     if(!codeMatchesQuery(code, q)) return false;
@@ -1036,6 +1079,7 @@ async function initApp(){
   if(appInitialized) return;
   appInitialized = true;
   await loadMyMixesLocal();
+  await loadCustomColorsLocal();
   render();
   doFullSync();
 }
@@ -1049,6 +1093,7 @@ function showApp(){
   isAdmin = !!(user && user.email === (ADMIN_USERNAME + '@' + USERNAME_EMAIL_DOMAIN));
   document.getElementById('addMixBtn').style.display = isAdmin ? '' : 'none';
   document.getElementById('importBtn').style.display = isAdmin ? '' : 'none';
+  document.getElementById('newColorBtn').style.display = isAdmin ? '' : 'none';
   document.getElementById('loginOverlay').classList.remove('open');
   document.getElementById('appShell').style.display = 'block';
   initApp();
@@ -1110,6 +1155,30 @@ document.getElementById('importFileInput').addEventListener('change', async (e)=
   render();
   cloudPush();
   alert(t.importDone(recordCount, codeCount));
+});
+
+document.getElementById('newColorBtn').addEventListener('click', async ()=>{
+  if(!isAdmin) return;
+  const t = STR[currentLang];
+  const raw = prompt(t.newColorPrompt);
+  if(raw === null) return;
+  const code = raw.trim();
+  if(!code){ alert(t.newColorEmpty); return; }
+
+  const existing = ALL_COLORS.find(c => c[0].toLowerCase() === code.toLowerCase());
+  if(existing){
+    alert(t.newColorDuplicate(existing[0]));
+    openModal(existing);
+    return;
+  }
+
+  customColors[code] = { hex: CUSTOM_COLOR_PLACEHOLDER_HEX, updated: new Date().toISOString().slice(0,10) };
+  await saveCustomColorsLocal();
+  render();
+  cloudPush();
+
+  const newEntry = ALL_COLORS.find(c => c[0] === code);
+  if(newEntry) openModal(newEntry);
 });
 
 (async function initAuthGate(){
