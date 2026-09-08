@@ -154,6 +154,8 @@
   .cmyk-swatch{ display:inline-block; width:10px;height:10px; margin-inline-end:6px; vertical-align:middle;}
 
   .mine-box{ border:1.5px solid var(--mine); padding:14px 14px 16px; margin-top:12px; }
+  .mine-box.readonly-mode{ border-color:var(--line); opacity:0.9; }
+  .readonly-mode input[readonly], .readonly-mode textarea[readonly]{ background:var(--paper-dim); color:var(--ink); cursor:default; }
   .mine-box .hdr{ display:flex; justify-content:space-between; align-items:center; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--mine); font-weight:700; margin-bottom:10px; }
   html[dir="rtl"] .mine-box .hdr{ letter-spacing:0; text-transform:none; }
   .prod-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
@@ -806,6 +808,8 @@ document.querySelectorAll('.coll-btn').forEach(btn=>{
 // ---------- Color detail modal ----------
 const overlay = document.getElementById('overlay');
 let currentCode = null;
+const ADMIN_USERNAME = 'admin';
+let isAdmin = false;
 let currentColorEntry = null;
 let openCards = []; // in-memory editable list of {id, productCode, productName, company, ingredients:[{id,name,amount,unit}], notes, updated}
 
@@ -814,30 +818,33 @@ function escHtml(s){
 }
 
 function ingRowHTML(i, t){
+  const ro = isAdmin ? '' : 'readonly';
+  const rmCell = isAdmin ? `<button class="rm-ing" title="✕">✕</button>` : `<span></span>`;
   return `<div class="ing-row" data-id="${i.id}">
-      <input type="text" class="ing-name" placeholder="${t.ingNamePh}" value="${escHtml(i.name)}">
-      <input type="text" class="ing-amount ltr" placeholder="${t.ingAmtPh}" value="${escHtml(i.amount)}">
-      <input type="text" class="ing-unit" placeholder="${t.ingUnitPh}" value="${escHtml(i.unit)}">
-      <button class="rm-ing" title="✕">✕</button>
+      <input type="text" class="ing-name" placeholder="${t.ingNamePh}" value="${escHtml(i.name)}" ${ro}>
+      <input type="text" class="ing-amount ltr" placeholder="${t.ingAmtPh}" value="${escHtml(i.amount)}" ${ro}>
+      <input type="text" class="ing-unit" placeholder="${t.ingUnitPh}" value="${escHtml(i.unit)}" ${ro}>
+      ${rmCell}
     </div>`;
 }
 
 function cardHTML(card, t){
   const statusText = card.updated ? (t.savedPrefix + ' · ' + card.updated) : t.notSavedHint;
-  return `<div class="mine-box" data-card-id="${card.id}">
+  const ro = isAdmin ? '' : 'readonly';
+  return `<div class="mine-box${isAdmin ? '' : ' readonly-mode'}" data-card-id="${card.id}">
     <div class="hdr"><span class="card-status">${statusText}</span><span class="saved-flash card-flash"></span></div>
     <div class="prod-row">
-      <input type="text" class="prod-code" placeholder="${t.prodCodeLabel}" value="${escHtml(card.productCode)}">
-      <input type="text" class="prod-name" placeholder="${t.prodNameLabel}" value="${escHtml(card.productName)}">
-      <input type="text" class="prod-company" placeholder="${t.companyLabel}" value="${escHtml(card.company)}">
+      <input type="text" class="prod-code" placeholder="${t.prodCodeLabel}" value="${escHtml(card.productCode)}" ${ro}>
+      <input type="text" class="prod-name" placeholder="${t.prodNameLabel}" value="${escHtml(card.productName)}" ${ro}>
+      <input type="text" class="prod-company" placeholder="${t.companyLabel}" value="${escHtml(card.company)}" ${ro}>
     </div>
     <div class="ing-list">${card.ingredients.map(i=>ingRowHTML(i,t)).join('')}</div>
-    <button class="add-ing-btn add-ing-card" type="button">${t.addIngredient}</button>
-    <textarea class="card-notes" placeholder="${t.notesPlaceholder}">${escHtml(card.notes)}</textarea>
-    <div class="mine-actions">
+    ${isAdmin ? `<button class="add-ing-btn add-ing-card" type="button">${t.addIngredient}</button>` : ''}
+    <textarea class="card-notes" placeholder="${t.notesPlaceholder}" ${ro}>${escHtml(card.notes)}</textarea>
+    ${isAdmin ? `<div class="mine-actions">
       <button class="save-btn card-save" type="button">${t.save}</button>
       <button class="clear-btn card-delete" type="button">${t.delete}</button>
-    </div>
+    </div>` : ''}
   </div>`;
 }
 
@@ -868,9 +875,11 @@ function updateCardDom(cardId){
 }
 
 function wireCardEvents(cardId){
+  if(!isAdmin) return; // read-only accounts get no interactive handlers at all
   const root = document.querySelector(`[data-card-id="${cardId}"]`);
   if(!root) return;
-  root.querySelector('.add-ing-card').addEventListener('click', ()=>{
+  const addBtn = root.querySelector('.add-ing-card');
+  if(addBtn) addBtn.addEventListener('click', ()=>{
     syncCardFromDom(cardId);
     const card = openCards.find(c=>c.id===cardId);
     card.ingredients.push({id:uid(), name:'', amount:'', unit:''});
@@ -886,11 +895,14 @@ function wireCardEvents(cardId){
       updateCardDom(cardId);
     });
   });
-  root.querySelector('.card-save').addEventListener('click', ()=>saveCard(cardId));
-  root.querySelector('.card-delete').addEventListener('click', ()=>deleteCard(cardId));
+  const saveBtn = root.querySelector('.card-save');
+  if(saveBtn) saveBtn.addEventListener('click', ()=>saveCard(cardId));
+  const delBtn = root.querySelector('.card-delete');
+  if(delBtn) delBtn.addEventListener('click', ()=>deleteCard(cardId));
 }
 
 function saveCard(cardId){
+  if(!isAdmin) return;
   const t = STR[currentLang];
   syncCardFromDom(cardId);
   const card = openCards.find(c=>c.id===cardId);
@@ -918,6 +930,7 @@ function saveCard(cardId){
 }
 
 function deleteCard(cardId){
+  if(!isAdmin) return;
   const t = STR[currentLang];
   if(myMixes[currentCode]){
     const idx = myMixes[currentCode].findIndex(e=>e.id===cardId);
@@ -935,6 +948,7 @@ function deleteCard(cardId){
 }
 
 function addNewCard(){
+  if(!isAdmin) return;
   const card = {id:uid(), productCode:'', productName:'', company:'', ingredients:[{id:uid(),name:'',amount:'',unit:''}], notes:'', updated:''};
   const wasEmpty = openCards.length === 0;
   openCards.push(card);
@@ -1031,6 +1045,10 @@ function showLogin(){
   document.getElementById('loginOverlay').classList.add('open');
 }
 function showApp(){
+  const user = firebase.auth().currentUser;
+  isAdmin = !!(user && user.email === (ADMIN_USERNAME + '@' + USERNAME_EMAIL_DOMAIN));
+  document.getElementById('addMixBtn').style.display = isAdmin ? '' : 'none';
+  document.getElementById('importBtn').style.display = isAdmin ? '' : 'none';
   document.getElementById('loginOverlay').classList.remove('open');
   document.getElementById('appShell').style.display = 'block';
   initApp();
@@ -1068,6 +1086,7 @@ document.getElementById('importBtn').addEventListener('click', ()=>{
   document.getElementById('importFileInput').click();
 });
 document.getElementById('importFileInput').addEventListener('change', async (e)=>{
+  if(!isAdmin) return;
   const t = STR[currentLang];
   const file = e.target.files[0];
   e.target.value = '';
