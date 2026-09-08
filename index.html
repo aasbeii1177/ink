@@ -320,6 +320,7 @@
       <div class="section-label" id="refMixSection" data-i18n="refMixHeader">Reference mixing guide (computed, approximate)</div>
       <div class="recipe" id="recipe"></div>
       <div class="note" id="mixNote"></div>
+      <button id="deleteColorBtn" type="button" style="display:none; margin-top:10px; font-family:inherit; font-size:11px; background:none; border:1px solid var(--mine); color:var(--mine); padding:7px 12px; cursor:pointer;"></button>
 
       <div class="section-label" style="border-top:none; margin-top:22px;">
         <span data-i18n="yourMixHeader">Your saved mixes for this color</span>
@@ -365,6 +366,11 @@ const STR = {
     collLabel:'Collection:',
     coll_all:'All', coll_coated:'Solid Coated', coll_uncoated:'Solid Uncoated', coll_custom:'Custom / Unlisted', coll_tcx:'TCX Fashion/Home',
     noRefData:'No official Pantone reference exists for this entry — this is a custom or unlisted color, tracked only by the recipe below.',
+    deleteColorBtn:'Delete this color',
+    deleteColorConfirm:(code, mixCount)=> mixCount>0
+      ? `Delete "${code}" and its ${mixCount} saved mix${mixCount===1?'':'es'}? This can't be undone.`
+      : `Delete "${code}"? This can't be undone.`,
+    deleteColorDone:'Color deleted.',
     coll_metallic:'Metallic', coll_pastel:'Pastels & Neons', coll_skin:'Skin Tones',
     noMatch:'No colors match that search.',
     refMixHeader:'Reference mixing guide (computed, approximate)',
@@ -424,6 +430,11 @@ const STR = {
     collLabel:'المجموعة:',
     coll_all:'الكل', coll_coated:'مصقول (Coated)', coll_uncoated:'غير مصقول (Uncoated)', coll_custom:'مخصص / غير مصنّف', coll_tcx:'أزياء ومنسوجات (TCX)',
     noRefData:'لا يوجد مرجع بانتون رسمي لهذا العنصر — إنه لون مخصص أو غير مُصنّف، ويُتابَع فقط عبر الوصفة أدناه.',
+    deleteColorBtn:'حذف هذا اللون',
+    deleteColorConfirm:(code, mixCount)=> mixCount>0
+      ? `حذف "${code}" مع ${mixCount} خلطة محفوظة؟ لا يمكن التراجع عن هذا.`
+      : `حذف "${code}"؟ لا يمكن التراجع عن هذا.`,
+    deleteColorDone:'تم حذف اللون.',
     coll_metallic:'معدني', coll_pastel:'باستيل ونيون', coll_skin:'درجات لون البشرة',
     noMatch:'لا توجد ألوان مطابقة لهذا البحث.',
     refMixHeader:'دليل الخلط المرجعي (محسوب وتقريبي)',
@@ -1026,6 +1037,14 @@ function openModal(c){
   document.getElementById('mixNote').style.display = isCustom ? 'block' : 'block';
   if(isCustom){ document.getElementById('mixNote').textContent = t.noRefData; }
 
+  const delBtn = document.getElementById('deleteColorBtn');
+  if(isCustom && isAdmin){
+    delBtn.style.display = 'inline-block';
+    delBtn.textContent = t.deleteColorBtn;
+  } else {
+    delBtn.style.display = 'none';
+  }
+
   const order = ['red','yellow','blue','white','black'];
   const recipeEl = document.getElementById('recipe');
   recipeEl.innerHTML = order
@@ -1179,6 +1198,28 @@ document.getElementById('newColorBtn').addEventListener('click', async ()=>{
 
   const newEntry = ALL_COLORS.find(c => c[0] === code);
   if(newEntry) openModal(newEntry);
+});
+
+document.getElementById('deleteColorBtn').addEventListener('click', async ()=>{
+  if(!isAdmin || !currentCode) return;
+  const t = STR[currentLang];
+  const code = currentCode;
+  const existingMixes = Array.isArray(myMixes[code]) ? myMixes[code].filter(e=>e && !e.deleted) : [];
+  if(!confirm(t.deleteColorConfirm(code, existingMixes.length))) return;
+
+  delete customColors[code];
+  await saveCustomColorsLocal();
+
+  if(myMixes[code]){
+    const today = new Date().toISOString().slice(0,10);
+    myMixes[code] = myMixes[code].map(e => ({...e, deleted:true, updated: today}));
+    await saveMyMixesLocal();
+  }
+
+  overlay.classList.remove('open');
+  render();
+  cloudPush();
+  alert(t.deleteColorDone);
 });
 
 (async function initAuthGate(){
