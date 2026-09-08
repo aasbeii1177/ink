@@ -2,7 +2,7 @@
 // Caches only the app shell (this site's own files). Firebase/Firestore/Google Fonts
 // requests are left alone so login, sync, and fonts always go straight to the network.
 
-const CACHE_NAME = 'pantone-explorer-v8';
+const CACHE_NAME = 'pantone-explorer-v9';
 const APP_SHELL = [
   './',
   './index.html',
