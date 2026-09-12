@@ -246,6 +246,7 @@
     <span class="swatch-count ltr" id="syncIndicator" style="font-size:10px;"></span>
     <input type="file" id="importFileInput" accept=".json" style="display:none;">
     <button id="newColorBtn" type="button" data-i18n="newColorBtn" style="border:1.5px solid var(--mine); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--mine);">+ New Color</button>
+    <button id="manageCuratedBtn" type="button" data-i18n="manageCuratedBtn" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Color List</button>
     <button id="importBtn" type="button" data-i18n="importBtn" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Import</button>
     <button id="signOutBtn" type="button" data-i18n="signOut" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Sign out</button>
     <button id="langToggle" type="button">العربية</button>
@@ -296,6 +297,41 @@
       </div>
       <button class="sync-btn-primary" id="loginSubmitBtn" style="width:100%; padding:11px;" data-i18n="loginSubmit">Sign in</button>
       <div class="sync-status" id="loginStatus" style="border-top:none; padding-top:10px; min-height:16px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Manage curated color list (admin only) -->
+<div class="overlay" id="curatedOverlay">
+  <div class="modal narrow">
+    <button class="close-btn" id="curatedCloseBtn">✕</button>
+    <div class="modal-body" style="padding-top:24px;">
+      <h2 style="font-family:var(--serif); font-size:20px; margin:0 0 4px;" data-i18n="curatedTitle">Manage color list</h2>
+      <div style="font-size:12px; opacity:0.6; margin-bottom:16px;" data-i18n="curatedSubtitle">These are the names your manager can choose from when starting a new color.</div>
+      <div class="sync-field">
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="curatedNewInput" style="flex:1;" placeholder="">
+          <button class="save-btn" id="curatedAddBtn" type="button" data-i18n="curatedAdd" style="white-space:nowrap;">Add</button>
+        </div>
+      </div>
+      <div id="curatedList" style="margin-top:14px; display:flex; flex-direction:column; gap:6px;"></div>
+      <div class="mine-empty" id="curatedEmpty" style="display:none;" data-i18n="curatedEmptyMsg">No colors in the list yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Pick a color from the curated list (manager only) -->
+<div class="overlay" id="colorPickOverlay">
+  <div class="modal narrow">
+    <button class="close-btn" id="colorPickCloseBtn">✕</button>
+    <div class="modal-body" style="padding-top:24px;">
+      <h2 style="font-family:var(--serif); font-size:20px; margin:0 0 4px;" data-i18n="colorPickTitle">Choose a color</h2>
+      <div style="font-size:12px; opacity:0.6; margin-bottom:16px;" data-i18n="colorPickSubtitle">Pick from the list your admin has approved.</div>
+      <select id="colorPickSelect" class="ltr" style="width:100%; font-family:inherit; font-size:13px; padding:9px 10px; border:1.5px solid var(--line); background:#fff; color:var(--ink);"></select>
+      <div class="mine-empty" id="colorPickEmpty" style="display:none; margin-top:10px;" data-i18n="colorPickEmptyMsg">No colors available yet — ask your admin to add some.</div>
+      <div class="sync-actions">
+        <button class="sync-btn-primary" id="colorPickConfirmBtn" type="button" data-i18n="colorPickConfirm">Use this color</button>
+      </div>
     </div>
   </div>
 </div>
@@ -407,6 +443,19 @@ const STR = {
     newColorPrompt:'Name or code for this new color (e.g. a product name, or your own reference code):',
     newColorEmpty:'Enter a name or code first.',
     newColorDuplicate:(code)=>`"${code}" already exists — opening it instead.`,
+    manageCuratedBtn:'Color List',
+    curatedTitle:'Manage color list',
+    curatedSubtitle:'These are the names your manager can choose from when starting a new color.',
+    curatedAdd:'Add',
+    curatedNewPlaceholder:'New color name…',
+    curatedEmptyMsg:'No colors in the list yet.',
+    curatedRemove:'Remove',
+    curatedAlreadyExists:'That name is already in the list.',
+    colorPickTitle:'Choose a color',
+    colorPickSubtitle:'Pick from the list your admin has approved.',
+    colorPickConfirm:'Use this color',
+    colorPickEmptyMsg:'No colors available yet — ask your admin to add some.',
+    colorPickChooseFirst:'Choose a color from the list first.',
     importConfirm:(n,codes)=>`Import ${n} saved mixes across ${codes} colors? This merges into your existing data — nothing already saved gets deleted.`,
     importDone:(n,codes)=>`Imported ${n} mixes across ${codes} colors.`,
     importBadFile:'That file could not be read as a valid mixes export.',
@@ -471,6 +520,19 @@ const STR = {
     newColorPrompt:'اسم أو رمز لهذا اللون الجديد (مثل اسم منتج، أو رمزك المرجعي الخاص):',
     newColorEmpty:'أدخل اسمًا أو رمزًا أولاً.',
     newColorDuplicate:(code)=>`"${code}" موجود بالفعل — سيتم فتحه بدلاً من ذلك.`,
+    manageCuratedBtn:'قائمة الألوان',
+    curatedTitle:'إدارة قائمة الألوان',
+    curatedSubtitle:'هذه هي الأسماء التي يمكن للمدير الاختيار من بينها عند بدء لون جديد.',
+    curatedAdd:'إضافة',
+    curatedNewPlaceholder:'اسم لون جديد…',
+    curatedEmptyMsg:'لا توجد ألوان في القائمة بعد.',
+    curatedRemove:'إزالة',
+    curatedAlreadyExists:'هذا الاسم موجود بالفعل في القائمة.',
+    colorPickTitle:'اختر لونًا',
+    colorPickSubtitle:'اختر من القائمة التي اعتمدها المسؤول.',
+    colorPickConfirm:'استخدام هذا اللون',
+    colorPickEmptyMsg:'لا توجد ألوان متاحة بعد — اطلب من المسؤول إضافة بعضها.',
+    colorPickChooseFirst:'اختر لونًا من القائمة أولاً.',
     importConfirm:(n,codes)=>`استيراد ${n} خلطة محفوظة عبر ${codes} لونًا؟ سيتم الدمج مع بياناتك الحالية — لن يُحذف أي شيء محفوظ مسبقًا.`,
     importDone:(n,codes)=>`تم استيراد ${n} خلطة عبر ${codes} لونًا.`,
     importBadFile:'تعذّرت قراءة هذا الملف كملف تصدير خلطات صالح.',
@@ -496,6 +558,7 @@ function applyStaticI18n(){
   document.getElementById('langToggle').textContent = t.langBtn;
   document.getElementById('cmykLabel').textContent = t.cmykLabel;
   document.getElementById('modalDisclaimer').textContent = t.modalDisclaimer;
+  document.getElementById('curatedNewInput').placeholder = t.curatedNewPlaceholder;
   setSyncIndicator(currentSyncState);
 }
 
@@ -675,13 +738,42 @@ async function saveCustomColorsLocal(){
   await devSet('customColorsData', JSON.stringify(customColors));
   rebuildAllColors();
 }
-function mergeCustomColors(local, cloud){
+function mergeKeyedByUpdated(local, cloud){
   const merged = Object.assign({}, local||{});
-  for(const code in (cloud||{})){
-    const c = cloud[code], l = merged[code];
-    if(!l || (c.updated||'') >= (l.updated||'')) merged[code] = c;
+  for(const key in (cloud||{})){
+    const c = cloud[key], l = merged[key];
+    if(!l || (c.updated||'') >= (l.updated||'')) merged[key] = c;
   }
   return merged;
+}
+function mergeCustomColors(local, cloud){ return mergeKeyedByUpdated(local, cloud); }
+
+// ---------- Curated color list (admin-managed dropdown for manager) ----------
+let curatedColors = {}; // name -> {updated, deleted}
+async function loadCuratedColorsLocal(){
+  const raw = await devGet('curatedColorsData');
+  try{ curatedColors = raw ? JSON.parse(raw) : {}; }catch(e){ curatedColors = {}; }
+}
+async function saveCuratedColorsLocal(){
+  await devSet('curatedColorsData', JSON.stringify(curatedColors));
+}
+function mergeCuratedColors(local, cloud){ return mergeKeyedByUpdated(local, cloud); }
+function getCuratedNames(){
+  return Object.keys(curatedColors).filter(n => curatedColors[n] && !curatedColors[n].deleted).sort();
+}
+function addCuratedColor(name){
+  name = (name||'').trim();
+  if(!name) return false;
+  curatedColors[name] = { updated: new Date().toISOString().slice(0,10), deleted:false };
+  saveCuratedColorsLocal();
+  cloudPush();
+  return true;
+}
+function removeCuratedColor(name){
+  if(!curatedColors[name]) return;
+  curatedColors[name] = { updated: new Date().toISOString().slice(0,10), deleted:true };
+  saveCuratedColorsLocal();
+  cloudPush();
 }
 
 function mergeEntryArrays(localArr, cloudArr){
@@ -721,7 +813,7 @@ async function cloudPush(){
   const ref = fbDocRef();
   if(!ref) return {ok:false, reason:'not-configured'};
   try{
-    await ref.set({ data: myMixes, customColors: customColors, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    await ref.set({ data: myMixes, customColors: customColors, curated: curatedColors, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
     return {ok:true};
   }catch(e){ return {ok:false, reason: (e && e.code==='permission-denied') ? 'rules' : 'error'}; }
 }
@@ -731,7 +823,7 @@ async function cloudPull(){
   try{
     const snap = await ref.get();
     const d = snap.exists ? snap.data() : {};
-    return {ok:true, data: d.data || {}, customColors: d.customColors || {}};
+    return {ok:true, data: d.data || {}, customColors: d.customColors || {}, curated: d.curated || {}};
   }catch(e){ return {ok:false, reason: (e && e.code==='permission-denied') ? 'rules' : 'error'}; }
 }
 
@@ -744,11 +836,14 @@ function startRealtimeListener(){
     const d = snap.data();
     const cloudData = d.data || {};
     const cloudCustom = d.customColors || {};
+    const cloudCurated = d.curated || {};
     const merged = mergeMixes(myMixes, cloudData);
     const mergedCustom = mergeCustomColors(customColors, cloudCustom);
+    const mergedCurated = mergeCuratedColors(curatedColors, cloudCurated);
     let changed = false;
     if(JSON.stringify(merged) !== JSON.stringify(myMixes)){ myMixes = merged; saveMyMixesLocal(); changed = true; }
     if(JSON.stringify(mergedCustom) !== JSON.stringify(customColors)){ customColors = mergedCustom; saveCustomColorsLocal(); changed = true; }
+    if(JSON.stringify(mergedCurated) !== JSON.stringify(curatedColors)){ curatedColors = mergedCurated; saveCuratedColorsLocal(); changed = true; }
     if(changed) render();
     setSyncIndicator('synced');
   }, ()=>{ setSyncIndicator('offline'); });
@@ -773,6 +868,8 @@ async function doFullSync(){
     await saveMyMixesLocal();
     customColors = mergeCustomColors(customColors, pull.customColors || {});
     await saveCustomColorsLocal();
+    curatedColors = mergeCuratedColors(curatedColors, pull.curated || {});
+    await saveCuratedColorsLocal();
   }
   const push = await cloudPush();
   if(!push.ok && !pull.ok){ setSyncIndicator('offline'); return false; }
@@ -863,7 +960,14 @@ document.querySelectorAll('.coll-btn').forEach(btn=>{
 const overlay = document.getElementById('overlay');
 let currentCode = null;
 const ADMIN_USERNAME = 'admin';
-let isAdmin = false;
+const MANAGER_USERNAME = 'manager';
+let userRole = 'readonly'; // 'admin' | 'manager' | 'readonly'
+let canEditMixes = false;   // admin + manager
+let canCreateColor = false; // admin + manager
+let canDeleteColor = false; // admin only
+let canImport = false;      // admin only
+let canManageCurated = false; // admin only
+let isAdmin = false; // kept for readability in a few spots; mirrors userRole==='admin'
 let currentColorEntry = null;
 let openCards = []; // in-memory editable list of {id, productCode, productName, company, ingredients:[{id,name,amount,unit}], notes, updated}
 
@@ -872,8 +976,8 @@ function escHtml(s){
 }
 
 function ingRowHTML(i, t){
-  const ro = isAdmin ? '' : 'readonly';
-  const rmCell = isAdmin ? `<button class="rm-ing" title="✕">✕</button>` : `<span></span>`;
+  const ro = canEditMixes ? '' : 'readonly';
+  const rmCell = canEditMixes ? `<button class="rm-ing" title="✕">✕</button>` : `<span></span>`;
   return `<div class="ing-row" data-id="${i.id}">
       <input type="text" class="ing-name" placeholder="${t.ingNamePh}" value="${escHtml(i.name)}" ${ro}>
       <input type="text" class="ing-amount ltr" placeholder="${t.ingAmtPh}" value="${escHtml(i.amount)}" ${ro}>
@@ -884,8 +988,8 @@ function ingRowHTML(i, t){
 
 function cardHTML(card, t){
   const statusText = card.updated ? (t.savedPrefix + ' · ' + card.updated) : t.notSavedHint;
-  const ro = isAdmin ? '' : 'readonly';
-  return `<div class="mine-box${isAdmin ? '' : ' readonly-mode'}" data-card-id="${card.id}">
+  const ro = canEditMixes ? '' : 'readonly';
+  return `<div class="mine-box${canEditMixes ? '' : ' readonly-mode'}" data-card-id="${card.id}">
     <div class="hdr"><span class="card-status">${statusText}</span><span class="saved-flash card-flash"></span></div>
     <div class="prod-row">
       <input type="text" class="prod-code" placeholder="${t.prodCodeLabel}" value="${escHtml(card.productCode)}" ${ro}>
@@ -893,9 +997,9 @@ function cardHTML(card, t){
       <input type="text" class="prod-company" placeholder="${t.companyLabel}" value="${escHtml(card.company)}" ${ro}>
     </div>
     <div class="ing-list">${card.ingredients.map(i=>ingRowHTML(i,t)).join('')}</div>
-    ${isAdmin ? `<button class="add-ing-btn add-ing-card" type="button">${t.addIngredient}</button>` : ''}
+    ${canEditMixes ? `<button class="add-ing-btn add-ing-card" type="button">${t.addIngredient}</button>` : ''}
     <textarea class="card-notes" placeholder="${t.notesPlaceholder}" ${ro}>${escHtml(card.notes)}</textarea>
-    ${isAdmin ? `<div class="mine-actions">
+    ${canEditMixes ? `<div class="mine-actions">
       <button class="save-btn card-save" type="button">${t.save}</button>
       <button class="clear-btn card-delete" type="button">${t.delete}</button>
     </div>` : ''}
@@ -929,7 +1033,7 @@ function updateCardDom(cardId){
 }
 
 function wireCardEvents(cardId){
-  if(!isAdmin) return; // read-only accounts get no interactive handlers at all
+  if(!canEditMixes) return; // read-only accounts get no interactive handlers at all
   const root = document.querySelector(`[data-card-id="${cardId}"]`);
   if(!root) return;
   const addBtn = root.querySelector('.add-ing-card');
@@ -956,7 +1060,7 @@ function wireCardEvents(cardId){
 }
 
 function saveCard(cardId){
-  if(!isAdmin) return;
+  if(!canEditMixes) return;
   const t = STR[currentLang];
   syncCardFromDom(cardId);
   const card = openCards.find(c=>c.id===cardId);
@@ -984,7 +1088,7 @@ function saveCard(cardId){
 }
 
 function deleteCard(cardId){
-  if(!isAdmin) return;
+  if(!canEditMixes) return;
   const t = STR[currentLang];
   if(myMixes[currentCode]){
     const idx = myMixes[currentCode].findIndex(e=>e.id===cardId);
@@ -1002,7 +1106,7 @@ function deleteCard(cardId){
 }
 
 function addNewCard(){
-  if(!isAdmin) return;
+  if(!canEditMixes) return;
   const card = {id:uid(), productCode:'', productName:'', company:'', ingredients:[{id:uid(),name:'',amount:'',unit:''}], notes:'', updated:''};
   const wasEmpty = openCards.length === 0;
   openCards.push(card);
@@ -1038,7 +1142,7 @@ function openModal(c){
   if(isCustom){ document.getElementById('mixNote').textContent = t.noRefData; }
 
   const delBtn = document.getElementById('deleteColorBtn');
-  if(isCustom && isAdmin){
+  if(isCustom && canDeleteColor){
     delBtn.style.display = 'inline-block';
     delBtn.textContent = t.deleteColorBtn;
   } else {
@@ -1099,6 +1203,7 @@ async function initApp(){
   appInitialized = true;
   await loadMyMixesLocal();
   await loadCustomColorsLocal();
+  await loadCuratedColorsLocal();
   render();
   doFullSync();
 }
@@ -1109,10 +1214,22 @@ function showLogin(){
 }
 function showApp(){
   const user = firebase.auth().currentUser;
-  isAdmin = !!(user && user.email === (ADMIN_USERNAME + '@' + USERNAME_EMAIL_DOMAIN));
-  document.getElementById('addMixBtn').style.display = isAdmin ? '' : 'none';
-  document.getElementById('importBtn').style.display = isAdmin ? '' : 'none';
-  document.getElementById('newColorBtn').style.display = isAdmin ? '' : 'none';
+  const email = user ? user.email : '';
+  if(email === ADMIN_USERNAME + '@' + USERNAME_EMAIL_DOMAIN) userRole = 'admin';
+  else if(email === MANAGER_USERNAME + '@' + USERNAME_EMAIL_DOMAIN) userRole = 'manager';
+  else userRole = 'readonly';
+
+  isAdmin = userRole === 'admin';
+  canEditMixes = userRole === 'admin' || userRole === 'manager';
+  canCreateColor = userRole === 'admin' || userRole === 'manager';
+  canDeleteColor = userRole === 'admin';
+  canImport = userRole === 'admin';
+  canManageCurated = userRole === 'admin';
+
+  document.getElementById('addMixBtn').style.display = canEditMixes ? '' : 'none';
+  document.getElementById('importBtn').style.display = canImport ? '' : 'none';
+  document.getElementById('newColorBtn').style.display = canCreateColor ? '' : 'none';
+  document.getElementById('manageCuratedBtn').style.display = canManageCurated ? '' : 'none';
   document.getElementById('loginOverlay').classList.remove('open');
   document.getElementById('appShell').style.display = 'block';
   initApp();
@@ -1150,7 +1267,7 @@ document.getElementById('importBtn').addEventListener('click', ()=>{
   document.getElementById('importFileInput').click();
 });
 document.getElementById('importFileInput').addEventListener('change', async (e)=>{
-  if(!isAdmin) return;
+  if(!canImport) return;
   const t = STR[currentLang];
   const file = e.target.files[0];
   e.target.value = '';
@@ -1176,12 +1293,9 @@ document.getElementById('importFileInput').addEventListener('change', async (e)=
   alert(t.importDone(recordCount, codeCount));
 });
 
-document.getElementById('newColorBtn').addEventListener('click', async ()=>{
-  if(!isAdmin) return;
+function instantiateColor(rawCode){
   const t = STR[currentLang];
-  const raw = prompt(t.newColorPrompt);
-  if(raw === null) return;
-  const code = raw.trim();
+  const code = (rawCode||'').trim();
   if(!code){ alert(t.newColorEmpty); return; }
 
   const existing = ALL_COLORS.find(c => c[0].toLowerCase() === code.toLowerCase());
@@ -1192,16 +1306,96 @@ document.getElementById('newColorBtn').addEventListener('click', async ()=>{
   }
 
   customColors[code] = { hex: CUSTOM_COLOR_PLACEHOLDER_HEX, updated: new Date().toISOString().slice(0,10) };
-  await saveCustomColorsLocal();
+  saveCustomColorsLocal();
   render();
   cloudPush();
 
   const newEntry = ALL_COLORS.find(c => c[0] === code);
   if(newEntry) openModal(newEntry);
+}
+
+document.getElementById('newColorBtn').addEventListener('click', ()=>{
+  if(!canCreateColor) return;
+  const t = STR[currentLang];
+  if(userRole === 'admin'){
+    const raw = prompt(t.newColorPrompt);
+    if(raw === null) return;
+    instantiateColor(raw);
+  } else {
+    openColorPickOverlay();
+  }
+});
+
+// ---------- Curated list management (admin) ----------
+const curatedOverlay = document.getElementById('curatedOverlay');
+function renderCuratedList(){
+  const t = STR[currentLang];
+  const names = getCuratedNames();
+  const list = document.getElementById('curatedList');
+  document.getElementById('curatedEmpty').style.display = names.length ? 'none' : 'block';
+  list.innerHTML = names.map(name => `
+    <div class="ing-row" style="grid-template-columns:1fr 70px;" data-name="${escHtml(name)}">
+      <div style="padding:6px 2px; font-size:12px;">${escHtml(name)}</div>
+      <button class="clear-btn curated-remove" type="button" style="padding:6px 8px; font-size:11px;">${t.curatedRemove}</button>
+    </div>`).join('');
+  list.querySelectorAll('.curated-remove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const name = btn.closest('[data-name]').dataset.name;
+      removeCuratedColor(name);
+      renderCuratedList();
+    });
+  });
+}
+document.getElementById('manageCuratedBtn').addEventListener('click', ()=>{
+  if(!canManageCurated) return;
+  renderCuratedList();
+  curatedOverlay.classList.add('open');
+});
+document.getElementById('curatedCloseBtn').addEventListener('click', ()=>curatedOverlay.classList.remove('open'));
+curatedOverlay.addEventListener('click', e=>{ if(e.target===curatedOverlay) curatedOverlay.classList.remove('open'); });
+document.getElementById('curatedAddBtn').addEventListener('click', ()=>{
+  const t = STR[currentLang];
+  const input = document.getElementById('curatedNewInput');
+  const name = input.value.trim();
+  if(!name) return;
+  if(getCuratedNames().some(n => n.toLowerCase() === name.toLowerCase())){
+    alert(t.curatedAlreadyExists);
+    return;
+  }
+  addCuratedColor(name);
+  input.value = '';
+  renderCuratedList();
+});
+document.getElementById('curatedNewInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('curatedAddBtn').click();
+});
+
+// ---------- Color picker (manager) ----------
+const colorPickOverlay = document.getElementById('colorPickOverlay');
+function openColorPickOverlay(){
+  const t = STR[currentLang];
+  const names = getCuratedNames();
+  const select = document.getElementById('colorPickSelect');
+  select.innerHTML = names.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+  const hasNames = names.length > 0;
+  select.style.display = hasNames ? '' : 'none';
+  document.getElementById('colorPickEmpty').style.display = hasNames ? 'none' : 'block';
+  document.getElementById('colorPickConfirmBtn').style.display = hasNames ? '' : 'none';
+  colorPickOverlay.classList.add('open');
+}
+document.getElementById('colorPickCloseBtn').addEventListener('click', ()=>colorPickOverlay.classList.remove('open'));
+colorPickOverlay.addEventListener('click', e=>{ if(e.target===colorPickOverlay) colorPickOverlay.classList.remove('open'); });
+document.getElementById('colorPickConfirmBtn').addEventListener('click', ()=>{
+  const t = STR[currentLang];
+  const select = document.getElementById('colorPickSelect');
+  const value = select.value;
+  if(!value){ alert(t.colorPickChooseFirst); return; }
+  colorPickOverlay.classList.remove('open');
+  instantiateColor(value);
 });
 
 document.getElementById('deleteColorBtn').addEventListener('click', async ()=>{
-  if(!isAdmin || !currentCode) return;
+  if(!canDeleteColor || !currentCode) return;
   const t = STR[currentLang];
   const code = currentCode;
   const existingMixes = Array.isArray(myMixes[code]) ? myMixes[code].filter(e=>e && !e.deleted) : [];
