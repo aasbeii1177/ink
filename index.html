@@ -365,7 +365,7 @@
       <div class="modal-info">
         <h2 id="modalName" class="ltr"></h2>
         <div class="sub" id="modalCode"></div>
-        <div class="value-row" id="valueRow">
+        <div class="value-row" id="valueRow" style="display:none;">
           <div><b>Hex</b><span id="valHex" class="ltr"></span></div>
           <div><b>RGB</b><span id="valRgb" class="ltr"></span></div>
           <div><b id="cmykLabel">CMYK (approx.)</b><span id="valCmyk" class="ltr"></span></div>
@@ -373,19 +373,19 @@
       </div>
     </div>
     <div class="modal-body">
-      <div class="section-label" id="refMixSection" data-i18n="refMixHeader">Reference mixing guide (computed, approximate)</div>
-      <div class="recipe" id="recipe"></div>
-      <div class="note" id="mixNote"></div>
+      <div class="section-label" id="refMixSection" data-i18n="refMixHeader" style="display:none;">Reference mixing guide (computed, approximate)</div>
+      <div class="recipe" id="recipe" style="display:none;"></div>
+      <div class="note" id="mixNote" style="display:none;"></div>
       <button id="deleteColorBtn" type="button" style="display:none; margin-top:10px; font-family:inherit; font-size:11px; background:none; border:1px solid var(--mine); color:var(--mine); padding:7px 12px; cursor:pointer;"></button>
 
-      <div class="section-label" style="border-top:none; margin-top:22px;">
+      <div class="section-label" style="border-top:none; margin-top:0;">
         <span data-i18n="yourMixHeader">Your saved mixes for this color</span>
         <span class="saved-flash" id="savedFlash"></span>
       </div>
       <div id="mixCards"></div>
       <button class="add-ing-btn" id="addMixBtn" data-i18n="addMix" style="margin-top:4px;">+ add a mix</button>
 
-      <div class="disclaimer" id="modalDisclaimer"></div>
+      <div class="disclaimer" id="modalDisclaimer" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -1213,24 +1213,14 @@ function openModal(c){
   const [code,hex,coll] = c;
   currentCode = code;
   currentColorEntry = c;
-  const {r,g,b} = hexToRgb(hex);
-  const cmyk = rgbToCmyk(r,g,b);
-  const recipe = mixRecipe(hex);
 
   document.getElementById('modalSw').style.background = hex;
   document.getElementById('modalName').textContent = code;
-  document.getElementById('modalCode').textContent = (t[COLL_KEY[coll]]||coll) + (coll==='custom' ? '' : (' · ' + hex.toUpperCase()));
-  document.getElementById('valHex').textContent = hex.toUpperCase();
-  document.getElementById('valRgb').textContent = `${r}, ${g}, ${b}`;
-  document.getElementById('valCmyk').textContent = `${cmyk.c} ${cmyk.m} ${cmyk.y} ${cmyk.k}`;
-  document.getElementById('cmykLabel').textContent = t.cmykLabel;
+  document.getElementById('modalCode').textContent = t[COLL_KEY[coll]]||coll;
+  // Hex/RGB/CMYK and the computed reference-mixing guide are intentionally hidden from the UI
+  // (they're approximations, not official Pantone data, and the team only wants name + color + their own saved mixes).
 
   const isCustom = coll === 'custom';
-  document.getElementById('valueRow').style.display = isCustom ? 'none' : 'flex';
-  document.getElementById('refMixSection').style.display = isCustom ? 'none' : 'flex';
-  document.getElementById('recipe').style.display = isCustom ? 'none' : 'flex';
-  document.getElementById('mixNote').style.display = isCustom ? 'block' : 'block';
-  if(isCustom){ document.getElementById('mixNote').textContent = t.noRefData; }
 
   const delBtn = document.getElementById('deleteColorBtn');
   if(isCustom && canDeleteColor){
@@ -1239,26 +1229,6 @@ function openModal(c){
   } else {
     delBtn.style.display = 'none';
   }
-
-  const order = ['red','yellow','blue','white','black'];
-  const recipeEl = document.getElementById('recipe');
-  recipeEl.innerHTML = order
-    .filter(k=>recipe[k]>0)
-    .sort((a,b)=>recipe[b]-recipe[a])
-    .map(k=>`
-      <div class="bar-row">
-        <div><span class="cmyk-swatch" style="background:${SWATCH_COLOR[k]}; border:1px solid #141414;"></span>${t.colorNames[k]}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${recipe[k]}%; background:${SWATCH_COLOR[k]}; border-inline-end:1px solid #141414;"></div></div>
-        <div class="ltr">${recipe[k]}%</div>
-      </div>`).join('');
-
-  const dominant = order.filter(k=>k!=='white'&&k!=='black').sort((a,b)=>recipe[b]-recipe[a])[0];
-  const {h,s,l} = rgbToHsl(r,g,b);
-  let bit1, bit2;
-  if(s<15) bit1 = t.mixNeutral; else bit1 = t.mixBuilt(t.colorNames[dominant]);
-  if(l>70) bit2 = t.mixLight; else if(l<30) bit2 = t.mixDark; else bit2 = t.mixMid;
-  if(!isCustom) document.getElementById('mixNote').textContent = t.mixFull(bit1, bit2);
-  document.getElementById('modalDisclaimer').textContent = t.modalDisclaimer;
 
   const rawArr = Array.isArray(myMixes[code]) ? myMixes[code] : [];
   openCards = rawArr.filter(e=>e && !e.deleted).map(e=>({
