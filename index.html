@@ -162,7 +162,7 @@
   .prod-row input{ font-family:inherit; font-size:12px; padding:6px 7px; border:1px solid var(--line); background:#fff; color:var(--ink); width:100%; min-width:0; box-sizing:border-box; }
   @media (max-width:640px){ .prod-row{ grid-template-columns:1fr 1fr; } .prod-row input:first-child{ grid-column:1 / -1; } }
   .ing-row{ display:grid; grid-template-columns:1fr 70px 60px 24px; gap:6px; margin-bottom:6px; align-items:center; min-width:0;}
-  .ing-row input{ font-family:inherit; font-size:12px; padding:6px 7px; border:1px solid var(--line); background:#fff; color:var(--ink); width:100%; min-width:0; box-sizing:border-box; }
+  .ing-row input, .ing-row select{ font-family:inherit; font-size:12px; padding:6px 7px; border:1px solid var(--line); background:#fff; color:var(--ink); width:100%; min-width:0; box-sizing:border-box; }
   .ing-row button{ border:1px solid var(--line); background:#fff; cursor:pointer; font-size:13px; padding:4px 0; }
   .add-ing-btn{ font-family:inherit; font-size:11px; border:1px dashed var(--line); background:none; padding:6px 10px; cursor:pointer; margin-top:2px; }
   textarea.card-notes{ width:100%; font-family:inherit; font-size:12px; padding:8px; border:1px solid var(--line); background:#fff; color:var(--ink); margin-top:10px; min-height:56px; resize:vertical; box-sizing:border-box; }
@@ -229,7 +229,7 @@
     .ing-row .rm-ing{ grid-area:rm; }
 
     .sync-field input, .sync-field textarea{ font-size:16px; } /* prevents iOS auto-zoom on focus */
-    input#search, .ing-row input, .prod-row input, .card-notes, #loginEmail, #loginPassword{ font-size:16px; }
+    input#search, .ing-row input, .ing-row select, .prod-row input, .card-notes, #loginEmail, #loginPassword{ font-size:16px; }
   }
 </style>
 </head>
@@ -247,6 +247,7 @@
     <input type="file" id="importFileInput" accept=".json" style="display:none;">
     <button id="newColorBtn" type="button" data-i18n="newColorBtn" style="border:1.5px solid var(--mine); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--mine);">+ New Color</button>
     <button id="manageCuratedBtn" type="button" data-i18n="manageCuratedBtn" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Color List</button>
+    <button id="manageCuratedIngBtn" type="button" data-i18n="manageCuratedIngBtn" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Ink List</button>
     <button id="importBtn" type="button" data-i18n="importBtn" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Import</button>
     <button id="signOutBtn" type="button" data-i18n="signOut" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Sign out</button>
     <button id="langToggle" type="button">العربية</button>
@@ -316,6 +317,25 @@
       </div>
       <div id="curatedList" style="margin-top:14px; display:flex; flex-direction:column; gap:6px;"></div>
       <div class="mine-empty" id="curatedEmpty" style="display:none;" data-i18n="curatedEmptyMsg">No colors in the list yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Manage curated ink/component list (admin only) -->
+<div class="overlay" id="curatedIngOverlay">
+  <div class="modal narrow">
+    <button class="close-btn" id="curatedIngCloseBtn">✕</button>
+    <div class="modal-body" style="padding-top:24px;">
+      <h2 style="font-family:var(--serif); font-size:20px; margin:0 0 4px;" data-i18n="curatedIngTitle">Manage ink / component list</h2>
+      <div style="font-size:12px; opacity:0.6; margin-bottom:16px;" data-i18n="curatedIngSubtitle">These are the base ink and component names your manager can pick from when adding a mix.</div>
+      <div class="sync-field">
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="curatedIngNewInput" style="flex:1;" placeholder="">
+          <button class="save-btn" id="curatedIngAddBtn" type="button" data-i18n="curatedIngAdd" style="white-space:nowrap;">Add</button>
+        </div>
+      </div>
+      <div id="curatedIngList" style="margin-top:14px; display:flex; flex-direction:column; gap:6px;"></div>
+      <div class="mine-empty" id="curatedIngEmpty" style="display:none;" data-i18n="curatedIngEmptyMsg">No ink names in the list yet.</div>
     </div>
   </div>
 </div>
@@ -456,6 +476,15 @@ const STR = {
     colorPickConfirm:'Use this color',
     colorPickEmptyMsg:'No colors available yet — ask your admin to add some.',
     colorPickChooseFirst:'Choose a color from the list first.',
+    manageCuratedIngBtn:'Ink List',
+    curatedIngTitle:'Manage ink / component list',
+    curatedIngSubtitle:'These are the base ink and component names your manager can pick from when adding a mix.',
+    curatedIngAdd:'Add',
+    curatedIngNewPlaceholder:'New ink / component name…',
+    curatedIngEmptyMsg:'No ink names in the list yet.',
+    curatedIngRemove:'Remove',
+    curatedIngAlreadyExists:'That name is already in the list.',
+    ingPickPlaceholder:'— choose —',
     importConfirm:(n,codes)=>`Import ${n} saved mixes across ${codes} colors? This merges into your existing data — nothing already saved gets deleted.`,
     importDone:(n,codes)=>`Imported ${n} mixes across ${codes} colors.`,
     importBadFile:'That file could not be read as a valid mixes export.',
@@ -533,6 +562,15 @@ const STR = {
     colorPickConfirm:'استخدام هذا اللون',
     colorPickEmptyMsg:'لا توجد ألوان متاحة بعد — اطلب من المسؤول إضافة بعضها.',
     colorPickChooseFirst:'اختر لونًا من القائمة أولاً.',
+    manageCuratedIngBtn:'قائمة الأحبار',
+    curatedIngTitle:'إدارة قائمة الأحبار / المكوّنات',
+    curatedIngSubtitle:'هذه هي أسماء الأحبار الأساسية والمكوّنات التي يمكن للمدير الاختيار من بينها عند إضافة خلطة.',
+    curatedIngAdd:'إضافة',
+    curatedIngNewPlaceholder:'اسم حبر / مكوّن جديد…',
+    curatedIngEmptyMsg:'لا توجد أسماء أحبار في القائمة بعد.',
+    curatedIngRemove:'إزالة',
+    curatedIngAlreadyExists:'هذا الاسم موجود بالفعل في القائمة.',
+    ingPickPlaceholder:'— اختر —',
     importConfirm:(n,codes)=>`استيراد ${n} خلطة محفوظة عبر ${codes} لونًا؟ سيتم الدمج مع بياناتك الحالية — لن يُحذف أي شيء محفوظ مسبقًا.`,
     importDone:(n,codes)=>`تم استيراد ${n} خلطة عبر ${codes} لونًا.`,
     importBadFile:'تعذّرت قراءة هذا الملف كملف تصدير خلطات صالح.',
@@ -559,6 +597,7 @@ function applyStaticI18n(){
   document.getElementById('cmykLabel').textContent = t.cmykLabel;
   document.getElementById('modalDisclaimer').textContent = t.modalDisclaimer;
   document.getElementById('curatedNewInput').placeholder = t.curatedNewPlaceholder;
+  document.getElementById('curatedIngNewInput').placeholder = t.curatedIngNewPlaceholder;
   setSyncIndicator(currentSyncState);
 }
 
@@ -776,6 +815,34 @@ function removeCuratedColor(name){
   cloudPush();
 }
 
+// ---------- Curated ink/component list (admin-managed dropdown for manager) ----------
+let curatedIngredients = {}; // name -> {updated, deleted}
+async function loadCuratedIngredientsLocal(){
+  const raw = await devGet('curatedIngredientsData');
+  try{ curatedIngredients = raw ? JSON.parse(raw) : {}; }catch(e){ curatedIngredients = {}; }
+}
+async function saveCuratedIngredientsLocal(){
+  await devSet('curatedIngredientsData', JSON.stringify(curatedIngredients));
+}
+function mergeCuratedIngredients(local, cloud){ return mergeKeyedByUpdated(local, cloud); }
+function getCuratedIngredientNames(){
+  return Object.keys(curatedIngredients).filter(n => curatedIngredients[n] && !curatedIngredients[n].deleted).sort();
+}
+function addCuratedIngredient(name){
+  name = (name||'').trim();
+  if(!name) return false;
+  curatedIngredients[name] = { updated: new Date().toISOString().slice(0,10), deleted:false };
+  saveCuratedIngredientsLocal();
+  cloudPush();
+  return true;
+}
+function removeCuratedIngredient(name){
+  if(!curatedIngredients[name]) return;
+  curatedIngredients[name] = { updated: new Date().toISOString().slice(0,10), deleted:true };
+  saveCuratedIngredientsLocal();
+  cloudPush();
+}
+
 function mergeEntryArrays(localArr, cloudArr){
   const map = {};
   (localArr||[]).forEach(e=>{ if(e && e.id) map[e.id] = e; });
@@ -813,7 +880,7 @@ async function cloudPush(){
   const ref = fbDocRef();
   if(!ref) return {ok:false, reason:'not-configured'};
   try{
-    await ref.set({ data: myMixes, customColors: customColors, curated: curatedColors, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    await ref.set({ data: myMixes, customColors: customColors, curated: curatedColors, curatedIng: curatedIngredients, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
     return {ok:true};
   }catch(e){ return {ok:false, reason: (e && e.code==='permission-denied') ? 'rules' : 'error'}; }
 }
@@ -823,7 +890,7 @@ async function cloudPull(){
   try{
     const snap = await ref.get();
     const d = snap.exists ? snap.data() : {};
-    return {ok:true, data: d.data || {}, customColors: d.customColors || {}, curated: d.curated || {}};
+    return {ok:true, data: d.data || {}, customColors: d.customColors || {}, curated: d.curated || {}, curatedIng: d.curatedIng || {}};
   }catch(e){ return {ok:false, reason: (e && e.code==='permission-denied') ? 'rules' : 'error'}; }
 }
 
@@ -837,13 +904,16 @@ function startRealtimeListener(){
     const cloudData = d.data || {};
     const cloudCustom = d.customColors || {};
     const cloudCurated = d.curated || {};
+    const cloudCuratedIng = d.curatedIng || {};
     const merged = mergeMixes(myMixes, cloudData);
     const mergedCustom = mergeCustomColors(customColors, cloudCustom);
     const mergedCurated = mergeCuratedColors(curatedColors, cloudCurated);
+    const mergedCuratedIng = mergeCuratedIngredients(curatedIngredients, cloudCuratedIng);
     let changed = false;
     if(JSON.stringify(merged) !== JSON.stringify(myMixes)){ myMixes = merged; saveMyMixesLocal(); changed = true; }
     if(JSON.stringify(mergedCustom) !== JSON.stringify(customColors)){ customColors = mergedCustom; saveCustomColorsLocal(); changed = true; }
     if(JSON.stringify(mergedCurated) !== JSON.stringify(curatedColors)){ curatedColors = mergedCurated; saveCuratedColorsLocal(); changed = true; }
+    if(JSON.stringify(mergedCuratedIng) !== JSON.stringify(curatedIngredients)){ curatedIngredients = mergedCuratedIng; saveCuratedIngredientsLocal(); changed = true; }
     if(changed) render();
     setSyncIndicator('synced');
   }, ()=>{ setSyncIndicator('offline'); });
@@ -870,6 +940,8 @@ async function doFullSync(){
     await saveCustomColorsLocal();
     curatedColors = mergeCuratedColors(curatedColors, pull.curated || {});
     await saveCuratedColorsLocal();
+    curatedIngredients = mergeCuratedIngredients(curatedIngredients, pull.curatedIng || {});
+    await saveCuratedIngredientsLocal();
   }
   const push = await cloudPush();
   if(!push.ok && !pull.ok){ setSyncIndicator('offline'); return false; }
@@ -975,11 +1047,30 @@ function escHtml(s){
   return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function ingNameFieldHTML(i, t){
+  // Manager: must pick from the admin-curated ink/component list — no free typing.
+  // Admin: keeps free-text entry (and manages the curated list via the Ink List button).
+  // Read-only: plain disabled text, same as before.
+  if(canEditMixes && userRole === 'manager'){
+    const names = getCuratedIngredientNames();
+    const current = i.name || '';
+    const isCurated = current && names.includes(current);
+    let opts = `<option value=""${current ? '' : ' selected'}>${escHtml(t.ingPickPlaceholder)}</option>`;
+    opts += names.map(n => `<option value="${escHtml(n)}"${n===current?' selected':''}>${escHtml(n)}</option>`).join('');
+    if(current && !isCurated){
+      // Legacy/imported value not in the curated list — keep it visible & selected rather than silently dropping it.
+      opts += `<option value="${escHtml(current)}" selected>${escHtml(current)}</option>`;
+    }
+    return `<select class="ing-name">${opts}</select>`;
+  }
+  return `<input type="text" class="ing-name" placeholder="${t.ingNamePh}" value="${escHtml(i.name)}" ${canEditMixes ? '' : 'readonly'}>`;
+}
+
 function ingRowHTML(i, t){
   const ro = canEditMixes ? '' : 'readonly';
   const rmCell = canEditMixes ? `<button class="rm-ing" title="✕">✕</button>` : `<span></span>`;
   return `<div class="ing-row" data-id="${i.id}">
-      <input type="text" class="ing-name" placeholder="${t.ingNamePh}" value="${escHtml(i.name)}" ${ro}>
+      ${ingNameFieldHTML(i, t)}
       <input type="text" class="ing-amount ltr" placeholder="${t.ingAmtPh}" value="${escHtml(i.amount)}" ${ro}>
       <input type="text" class="ing-unit" placeholder="${t.ingUnitPh}" value="${escHtml(i.unit)}" ${ro}>
       ${rmCell}
@@ -1204,6 +1295,7 @@ async function initApp(){
   await loadMyMixesLocal();
   await loadCustomColorsLocal();
   await loadCuratedColorsLocal();
+  await loadCuratedIngredientsLocal();
   render();
   doFullSync();
 }
@@ -1230,6 +1322,7 @@ function showApp(){
   document.getElementById('importBtn').style.display = canImport ? '' : 'none';
   document.getElementById('newColorBtn').style.display = canCreateColor ? '' : 'none';
   document.getElementById('manageCuratedBtn').style.display = canManageCurated ? '' : 'none';
+  document.getElementById('manageCuratedIngBtn').style.display = canManageCurated ? '' : 'none';
   document.getElementById('loginOverlay').classList.remove('open');
   document.getElementById('appShell').style.display = 'block';
   initApp();
@@ -1368,6 +1461,50 @@ document.getElementById('curatedAddBtn').addEventListener('click', ()=>{
 });
 document.getElementById('curatedNewInput').addEventListener('keydown', e=>{
   if(e.key==='Enter') document.getElementById('curatedAddBtn').click();
+});
+
+// ---------- Curated ink/component list management (admin) ----------
+const curatedIngOverlay = document.getElementById('curatedIngOverlay');
+function renderCuratedIngList(){
+  const t = STR[currentLang];
+  const names = getCuratedIngredientNames();
+  const list = document.getElementById('curatedIngList');
+  document.getElementById('curatedIngEmpty').style.display = names.length ? 'none' : 'block';
+  list.innerHTML = names.map(name => `
+    <div class="ing-row" style="grid-template-columns:1fr 70px;" data-name="${escHtml(name)}">
+      <div style="padding:6px 2px; font-size:12px;">${escHtml(name)}</div>
+      <button class="clear-btn curated-ing-remove" type="button" style="padding:6px 8px; font-size:11px;">${t.curatedIngRemove}</button>
+    </div>`).join('');
+  list.querySelectorAll('.curated-ing-remove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const name = btn.closest('[data-name]').dataset.name;
+      removeCuratedIngredient(name);
+      renderCuratedIngList();
+    });
+  });
+}
+document.getElementById('manageCuratedIngBtn').addEventListener('click', ()=>{
+  if(!canManageCurated) return;
+  renderCuratedIngList();
+  curatedIngOverlay.classList.add('open');
+});
+document.getElementById('curatedIngCloseBtn').addEventListener('click', ()=>curatedIngOverlay.classList.remove('open'));
+curatedIngOverlay.addEventListener('click', e=>{ if(e.target===curatedIngOverlay) curatedIngOverlay.classList.remove('open'); });
+document.getElementById('curatedIngAddBtn').addEventListener('click', ()=>{
+  const t = STR[currentLang];
+  const input = document.getElementById('curatedIngNewInput');
+  const name = input.value.trim();
+  if(!name) return;
+  if(getCuratedIngredientNames().some(n => n.toLowerCase() === name.toLowerCase())){
+    alert(t.curatedIngAlreadyExists);
+    return;
+  }
+  addCuratedIngredient(name);
+  input.value = '';
+  renderCuratedIngList();
+});
+document.getElementById('curatedIngNewInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('curatedIngAddBtn').click();
 });
 
 // ---------- Color picker (manager) ----------
