@@ -244,6 +244,7 @@
   <div class="header-right">
     <div class="swatch-count"><b id="countNum">—</b><span data-i18n="swatchesShown">swatches shown</span></div>
     <span class="swatch-count ltr" id="syncIndicator" style="font-size:10px;"></span>
+    <span class="swatch-count" id="loggedInIndicator" style="font-size:10px;"></span>
     <input type="file" id="importFileInput" accept=".json" style="display:none;">
     <button id="newColorBtn" type="button" data-i18n="newColorBtn" style="border:1.5px solid var(--mine); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--mine);">+ New Color</button>
     <button id="manageCuratedBtn" type="button" data-i18n="manageCuratedBtn" style="border:1.5px solid var(--line); background:transparent; padding:9px 12px; font-family:inherit; font-size:11px; cursor:pointer; color:var(--ink);">Color List</button>
@@ -457,6 +458,8 @@ const STR = {
     footer:`This library covers 2,682 reference codes across Pantone's Solid Coated and Solid Uncoated collections, drawn from widely circulated, community-published PMS-to-hex conversion tables, not Pantone Inc.'s own certified digital standard. Pantone's full commercial system (TCX fashion/home, metallics, pastels & neons, skin tones, specialty finishes, and every reprinted edition) is proprietary and licensed — it isn't available as an open dataset anywhere, at any count. Treat hex/CMYK values here as a close approximation for screen and general reference, not a substitute for a physical Pantone guide when exact color matching matters. The "reference mixing" guide is a simplified red/yellow/blue/white/black pigment estimate, not an official Pantone ink formula. Anything you save under "My Mixes" automatically syncs to this workspace's own Firebase project (visible in the ☁ status in the corner) so it stays the same across every computer that opens this file.`,
     langBtn:'العربية',
     syncIndSyncing:'☁ syncing…', syncIndSynced:'☁ synced', syncIndOffline:'☁ offline (saved locally)',
+    loggedInAs:(user,role)=>`${user} · ${role}`,
+    roleLabel_admin:'Admin', roleLabel_manager:'Manager', roleLabel_readonly:'Printer',
     signOut:'Sign out',
     importBtn:'Import',
     newColorBtn:'+ New Color',
@@ -543,6 +546,8 @@ const STR = {
     footer:'تضم هذه المكتبة 2,682 رمزًا مرجعيًا عبر مجموعتَي Solid Coated وSolid Uncoated من بانتون، مأخوذة من جداول تحويل PMS إلى Hex منشورة ومتداولة على نطاق واسع، وليست المعيار الرقمي المعتمد رسميًا من شركة بانتون. نظام بانتون التجاري الكامل (TCX للأزياء والمنزل، والمعادن، والباستيل والنيون، ودرجات لون البشرة، والتشطيبات الخاصة) مملوك ومرخّص تجاريًا — وغير متاح كمجموعة بيانات مفتوحة بأي عدد. تعامل مع قيم Hex وCMYK هنا كتقريب قريب، وليست بديلاً عن دليل بانتون الفعلي عند الحاجة لمطابقة دقيقة. "دليل الخلط المرجعي" تقدير تقريبي وليس صيغة حبر رسمية من بانتون. كل ما تحفظه ضمن "خلطاتي" يُزامَن تلقائيًا مع مشروع Firebase الخاص بهذا العمل (تراه في مؤشر ☁ في الزاوية) ليبقى نفسه على كل جهاز يفتح هذا الملف.',
     langBtn:'English',
     syncIndSyncing:'☁ جارٍ المزامنة…', syncIndSynced:'☁ متزامن', syncIndOffline:'☁ غير متصل (محفوظ محليًا)',
+    loggedInAs:(user,role)=>`${user} · ${role}`,
+    roleLabel_admin:'مسؤول', roleLabel_manager:'مدير', roleLabel_readonly:'طابعة',
     signOut:'تسجيل الخروج',
     importBtn:'استيراد',
     newColorBtn:'+ لون جديد',
@@ -599,6 +604,7 @@ function applyStaticI18n(){
   document.getElementById('curatedNewInput').placeholder = t.curatedNewPlaceholder;
   document.getElementById('curatedIngNewInput').placeholder = t.curatedIngNewPlaceholder;
   setSyncIndicator(currentSyncState);
+  renderLoggedInIndicator();
 }
 
 async function setLang(lang){
@@ -1274,12 +1280,24 @@ function showLogin(){
   document.getElementById('appShell').style.display = 'none';
   document.getElementById('loginOverlay').classList.add('open');
 }
+let currentUsername = '';
+function renderLoggedInIndicator(){
+  const el = document.getElementById('loggedInIndicator');
+  if(!el) return;
+  if(!currentUsername){ el.textContent = ''; return; }
+  const t = STR[currentLang];
+  const roleLabel = t['roleLabel_' + userRole] || userRole;
+  el.textContent = t.loggedInAs(currentUsername, roleLabel);
+}
+
 function showApp(){
   const user = firebase.auth().currentUser;
   const email = user ? user.email : '';
+  currentUsername = email ? email.split('@')[0] : '';
   if(email === ADMIN_USERNAME + '@' + USERNAME_EMAIL_DOMAIN) userRole = 'admin';
   else if(email === MANAGER_USERNAME + '@' + USERNAME_EMAIL_DOMAIN) userRole = 'manager';
   else userRole = 'readonly';
+  renderLoggedInIndicator();
 
   isAdmin = userRole === 'admin';
   canEditMixes = userRole === 'admin' || userRole === 'manager';
@@ -1323,6 +1341,8 @@ document.getElementById('loginPassword').addEventListener('keydown', e=>{ if(e.k
 
 document.getElementById('signOutBtn').addEventListener('click', ()=>{
   if(fbUnsub){ fbUnsub(); fbUnsub = null; }
+  currentUsername = '';
+  renderLoggedInIndicator();
   if(typeof firebase !== 'undefined') firebase.auth().signOut();
 });
 
