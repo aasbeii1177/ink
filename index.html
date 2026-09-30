@@ -464,7 +464,9 @@ const STR = {
     importBtn:'Import',
     newColorBtn:'+ New Color',
     newColorPrompt:'Name or code for this new color (e.g. a product name, or your own reference code):',
+    newColorPromptManager:'Pantone number for this new color (e.g. 9999, or 185 C):',
     newColorEmpty:'Enter a name or code first.',
+    newColorInvalidFormat:'Enter a Pantone number — digits, optionally followed by a short letter suffix (e.g. 9999 or 185 C).',
     newColorDuplicate:(code)=>`"${code}" already exists — opening it instead.`,
     manageCuratedBtn:'Color List',
     curatedTitle:'Manage color list',
@@ -552,7 +554,9 @@ const STR = {
     importBtn:'استيراد',
     newColorBtn:'+ لون جديد',
     newColorPrompt:'اسم أو رمز لهذا اللون الجديد (مثل اسم منتج، أو رمزك المرجعي الخاص):',
+    newColorPromptManager:'رقم بانتون لهذا اللون الجديد (مثل 9999 أو 185 C):',
     newColorEmpty:'أدخل اسمًا أو رمزًا أولاً.',
+    newColorInvalidFormat:'أدخل رقم بانتون — أرقام، ويمكن إضافة حرف قصير بعدها (مثل 9999 أو 185 C).',
     newColorDuplicate:(code)=>`"${code}" موجود بالفعل — سيتم فتحه بدلاً من ذلك.`,
     manageCuratedBtn:'قائمة الألوان',
     curatedTitle:'إدارة قائمة الألوان',
@@ -1309,7 +1313,10 @@ function showApp(){
   document.getElementById('addMixBtn').style.display = canEditMixes ? '' : 'none';
   document.getElementById('importBtn').style.display = canImport ? '' : 'none';
   document.getElementById('newColorBtn').style.display = canCreateColor ? '' : 'none';
-  document.getElementById('manageCuratedBtn').style.display = canManageCurated ? '' : 'none';
+  // The curated color-NAME list is no longer used anywhere (manager now types a Pantone number
+  // directly when creating a color instead of picking a name from this list) — button hidden,
+  // data/logic kept in place in case this ever needs to come back.
+  document.getElementById('manageCuratedBtn').style.display = 'none';
   document.getElementById('manageCuratedIngBtn').style.display = canManageCurated ? '' : 'none';
   document.getElementById('loginOverlay').classList.remove('open');
   document.getElementById('appShell').style.display = 'block';
@@ -1397,6 +1404,7 @@ function instantiateColor(rawCode){
   if(newEntry) openModal(newEntry);
 }
 
+const PANTONE_NUMBER_FORMAT = /^\d+\s*[A-Za-z]{0,4}$/;
 document.getElementById('newColorBtn').addEventListener('click', ()=>{
   if(!canCreateColor) return;
   const t = STR[currentLang];
@@ -1405,7 +1413,13 @@ document.getElementById('newColorBtn').addEventListener('click', ()=>{
     if(raw === null) return;
     instantiateColor(raw);
   } else {
-    openColorPickOverlay();
+    // Manager: no free-text naming — must be a Pantone-style number (digits, optional short letter suffix like "185 C").
+    let raw = prompt(t.newColorPromptManager);
+    while(raw !== null && !PANTONE_NUMBER_FORMAT.test(raw.trim())){
+      raw = prompt(t.newColorInvalidFormat + '\n\n' + t.newColorPromptManager, raw);
+    }
+    if(raw === null) return;
+    instantiateColor(raw.trim());
   }
 });
 
